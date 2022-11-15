@@ -1,5 +1,8 @@
 build/
-.vs/
+.vs*/
+tests/bin/*
+
+!**/.gitkeep
 
 ### C++ ###
 # Prerequisites
