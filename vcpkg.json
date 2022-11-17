@@ -1,0 +1,10 @@
+{
+    "name": "specter",
+    "version-string": "0.1.0",
+    "dependencies": [
+        "cxxopts",
+        "range-v3",
+        "magic-enum",
+        "fmt"
+    ]
+}

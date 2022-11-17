@@ -3,15 +3,29 @@ include(max_warnings)
 add_executable(
     specter
     "main.cpp"
+    "elf_file.hpp" "elf_file.cpp"
 )
 
 target_max_warnings(TARGET specter)
 
 find_package(cxxopts CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
+find_package(magic_enum CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 target_link_libraries(specter PRIVATE cxxopts::cxxopts)
 target_link_libraries(specter PRIVATE range-v3)
+target_link_libraries(specter PRIVATE magic_enum::magic_enum)
+target_link_libraries(specter PRIVATE fmt::fmt)
+
+add_subdirectory(util)
+add_subdirectory(memory)
+
+target_link_libraries(
+    specter PRIVATE
+    specter_util
+    specter_memory
+)
 
 set_target_properties(specter PROPERTIES
     CXX_STANDARD 20

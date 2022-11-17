@@ -10,6 +10,8 @@
 
 #include <range/v3/algorithm/copy.hpp>
 
+#include "elf_file.hpp"
+
 namespace fs = std::filesystem;
 
 struct specter_options {
@@ -17,7 +19,7 @@ struct specter_options {
     std::vector<std::string> argv;
 
     [[nodiscard]] static specter_options parse(int argc, char** argv) {
-        cxxopts::Options options(argv[0], "Specter: RISC Architecture Emulator");
+        cxxopts::Options options(argv[0], "Specter: (R|C)ISC Architecture Emulator");
 
         options.add_options()
             ("h,help", "Show help")
@@ -43,7 +45,9 @@ struct specter_options {
             opts.executable = fs::canonical(argv0);
             opts.argv.emplace_back(std::move(argv0));
 
-            ranges::copy(res["argv"].as<std::vector<std::string>>(), std::back_inserter(opts.argv));
+            if (res.count("argv") > 0) {
+                ranges::copy(res["argv"].as<std::vector<std::string>>(), std::back_inserter(opts.argv));
+            }
 
         } catch (const std::exception& e) {
             std::cerr << e.what() << "\n\n"
@@ -58,8 +62,10 @@ struct specter_options {
 int main(int argc, char** argv) {
     auto opts = specter_options::parse(argc, argv);
 
-    for (auto& arg : opts.argv) {
-        std::cout << arg << ' ';
+    try {
+
+        elf_file elf{ opts.executable };
+    } catch (invalid_file_exception& e) {
+        std::cerr << "invalid executable file: " << e.what() << '\n';
     }
-    std::cout << "\n";
 }
