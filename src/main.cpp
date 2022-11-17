@@ -8,8 +8,6 @@
 
 #include <cxxopts.hpp>
 
-#include <range/v3/algorithm/copy.hpp>
-
 #include "elf_file.hpp"
 
 namespace fs = std::filesystem;
@@ -46,7 +44,7 @@ struct specter_options {
             opts.argv.emplace_back(std::move(argv0));
 
             if (res.count("argv") > 0) {
-                ranges::copy(res["argv"].as<std::vector<std::string>>(), std::back_inserter(opts.argv));
+                std::ranges::copy(res["argv"].as<std::vector<std::string>>(), std::back_inserter(opts.argv));
             }
 
         } catch (const std::exception& e) {
@@ -63,7 +61,6 @@ int main(int argc, char** argv) {
     auto opts = specter_options::parse(argc, argv);
 
     try {
-
         elf_file elf{ opts.executable };
     } catch (invalid_file_exception& e) {
         std::cerr << "invalid executable file: " << e.what() << '\n';

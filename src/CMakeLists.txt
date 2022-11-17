@@ -9,12 +9,10 @@ add_executable(
 target_max_warnings(TARGET specter)
 
 find_package(cxxopts CONFIG REQUIRED)
-find_package(range-v3 CONFIG REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
 target_link_libraries(specter PRIVATE cxxopts::cxxopts)
-target_link_libraries(specter PRIVATE range-v3)
 target_link_libraries(specter PRIVATE magic_enum::magic_enum)
 target_link_libraries(specter PRIVATE fmt::fmt)
 

@@ -91,8 +91,6 @@ struct fixed_enum_range<T> {
     static constexpr int max = std::numeric_limits<uint16_t>::max() - 2;
 };
 
-using xsomething = std::underlying_type_t<elf::object_type>;
-
 template <> struct magic_enum::customize::enum_range<elf::arch_class> : fixed_enum_range<elf::arch_class> {};
 template <> struct magic_enum::customize::enum_range<elf::endian> : fixed_enum_range<elf::endian> {};
 template <> struct magic_enum::customize::enum_range<elf::abi> : fixed_enum_range<elf::abi> {};

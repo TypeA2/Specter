@@ -60,7 +60,7 @@ elf_file::elf_file(const fs::path& path)
         throw invalid_file_exception("unsupported object type {}", type);
     }
 
-    std::cerr << object_type() << '\n';
+    //std::cerr << object_type() << '\n';
 }
 
 elf::arch_class elf_file::arch_class() const {
