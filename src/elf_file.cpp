@@ -60,7 +60,7 @@ elf_file::elf_file(const fs::path& path)
         throw invalid_file_exception("unsupported object type {}", type);
     }
 
-    //std::cerr << object_type() << '\n';
+    std::cerr << hdr.e_machine << '\n';
 }
 
 elf::arch_class elf_file::arch_class() const {
@@ -77,4 +77,8 @@ elf::abi elf_file::abi() const {
 
 elf::object_type elf_file::object_type() const {
     return static_cast<elf::object_type>(hdr().e_type);
+}
+
+uint16_t elf_file::machine() const {
+    return hdr().e_machine;
 }

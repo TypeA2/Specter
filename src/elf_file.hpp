@@ -64,38 +64,7 @@ namespace elf {
         lo_proc       = ET_LOPROC,
         hi_proc       = ET_HIPROC
     };
-
-    enum class machine : uint16_t {
-
-    };
 }
-
-template <typename T>
-concept byte_enum = std::is_enum_v<T> && std::same_as<std::underlying_type_t<T>, uint8_t>;
-
-template <typename T>
-concept short_enum = std::is_enum_v<T> && std::same_as<std::underlying_type_t<T>, uint16_t>;
-
-template <typename T>
-struct fixed_enum_range { };
-
-template <byte_enum T>
-struct fixed_enum_range<T> {
-    static constexpr int min = std::numeric_limits<uint8_t>::min();
-    static constexpr int max = std::numeric_limits<uint8_t>::max();
-};
-
-template <short_enum T>
-struct fixed_enum_range<T> {
-    static constexpr int min = std::numeric_limits<uint16_t>::min();
-    static constexpr int max = std::numeric_limits<uint16_t>::max() - 2;
-};
-
-template <> struct magic_enum::customize::enum_range<elf::arch_class> : fixed_enum_range<elf::arch_class> {};
-template <> struct magic_enum::customize::enum_range<elf::endian> : fixed_enum_range<elf::endian> {};
-template <> struct magic_enum::customize::enum_range<elf::abi> : fixed_enum_range<elf::abi> {};
-template <> struct magic_enum::customize::enum_range<elf::object_type> : fixed_enum_range<elf::object_type> {};
-template <> struct magic_enum::customize::enum_range<elf::machine> : fixed_enum_range<elf::machine> {};
 
 class elf_file {
     std::filesystem::path _path;
@@ -110,5 +79,5 @@ class elf_file {
     [[nodiscard]] elf::endian byte_order() const;
     [[nodiscard]] elf::abi abi() const;
     [[nodiscard]] elf::object_type object_type() const;
-
+    [[nodiscard]] uint16_t machine() const;
 };
