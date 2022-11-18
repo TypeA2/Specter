@@ -48,7 +48,7 @@ elf_file::elf_file(const fs::path& path)
         throw invalid_file_exception("invalid byte order {}", order);
     }
 
-    if (hdr.e_ident[EI_VERSION] != EV_CURRENT) {
+    if (hdr.e_ident[EI_VERSION] != EV_CURRENT && hdr.e_version != EV_CURRENT) {
         throw invalid_file_exception("unsupported version {:d}", hdr.e_ident[EI_VERSION]);
     }
 
@@ -60,7 +60,21 @@ elf_file::elf_file(const fs::path& path)
         throw invalid_file_exception("unsupported object type {}", type);
     }
 
-    std::cerr << hdr.e_machine << '\n';
+    if (auto mach = machine(); mach != elf::machine::RiscV) {
+        throw invalid_file_exception("unsupported machine type {}", mach);
+    }
+
+    if (entry() == 0) {
+        throw invalid_file_exception("executable requires an entrypoint");
+    }
+
+    std::cerr << entry() << '\n';
+    std::cerr << hdr.e_flags << '\n';
+    std::cerr << hdr.e_phentsize << '\n';
+    std::cerr << hdr.e_phnum << '\n';
+    std::cerr << hdr.e_shentsize << '\n';
+    std::cerr << hdr.e_shnum << '\n';
+    std::cerr << hdr.e_shstrndx << '\n';
 }
 
 elf::arch_class elf_file::arch_class() const {
@@ -79,6 +93,10 @@ elf::object_type elf_file::object_type() const {
     return static_cast<elf::object_type>(hdr().e_type);
 }
 
-uint16_t elf_file::machine() const {
-    return hdr().e_machine;
+elf::machine elf_file::machine() const {
+    return static_cast<elf::machine>(hdr().e_machine);
+}
+
+uintptr_t elf_file::entry() const {
+    return hdr().e_entry;
 }

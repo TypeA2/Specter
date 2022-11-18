@@ -64,6 +64,13 @@ namespace elf {
         lo_proc       = ET_LOPROC,
         hi_proc       = ET_HIPROC
     };
+
+    enum class machine : uint16_t {
+        AMD64 = EM_X86_64,
+        AArch64 = EM_AARCH64,
+        CUDA = EM_CUDA,
+        RiscV = EM_RISCV
+    };
 }
 
 class elf_file {
@@ -79,5 +86,7 @@ class elf_file {
     [[nodiscard]] elf::endian byte_order() const;
     [[nodiscard]] elf::abi abi() const;
     [[nodiscard]] elf::object_type object_type() const;
-    [[nodiscard]] uint16_t machine() const;
+    [[nodiscard]] elf::machine machine() const;
+
+    [[nodiscard]] uintptr_t entry() const;
 };
