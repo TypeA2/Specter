@@ -5,6 +5,7 @@
 #include <algorithm>
 
 #include <iostream>
+#include <bit>
 
 #include <cxxopts.hpp>
 
@@ -62,7 +63,7 @@ int main(int argc, char** argv) {
 
     try {
         elf_file elf{ opts.executable };
-    } catch (invalid_file_exception& e) {
+    } catch (invalid_file& e) {
         std::cerr << "invalid executable file: " << e.what() << '\n';
     }
 }

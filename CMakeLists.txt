@@ -6,7 +6,7 @@ if(VCPKG_EXECUTABLE)
     set(CMAKE_TOOLCHAIN_FILE "${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
 endif()
 
-project(Specter VERSION 1.0)
+project(Specter VERSION 1.0.0)
 
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 

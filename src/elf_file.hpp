@@ -10,11 +10,11 @@
 #include <util/mapped_file.hpp>
 #include <util/formatting.hpp>
 
-class invalid_file_exception : public std::runtime_error {
+class invalid_file : public std::runtime_error {
     public:
 
     template <typename... Args>
-    invalid_file_exception(fmt::format_string<Args...> fmt, Args&&... args)
+    invalid_file(fmt::format_string<Args...> fmt, Args&&... args)
         : std::runtime_error(fmt::format(fmt, std::forward<Args>(args)...)) {
 
     }

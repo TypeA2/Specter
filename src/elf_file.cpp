@@ -29,43 +29,43 @@ elf_file::elf_file(const fs::path& path)
     : _path{ path }, _mapping{ detail::open_safe(_path) } {
     
     if (_mapping.size() < sizeof(Elf64_Ehdr)) {
-        throw invalid_file_exception("ELF file is too small");
+        throw invalid_file("ELF file is too small");
     }
 
     Elf64_Ehdr& hdr = this->hdr();
 
     if (std::string_view(reinterpret_cast<char*>(&hdr.e_ident[0]), SELFMAG) != ELFMAG) {
-        throw invalid_file_exception("invalid magic number {:X} {:X} {:X} {:X} ({:.4s})",
+        throw invalid_file("invalid magic number {:X} {:X} {:X} {:X} ({:.4s})",
             hdr.e_ident[0], hdr.e_ident[1], hdr.e_ident[2], hdr.e_ident[3],
             reinterpret_cast<char*>(hdr.e_ident));
     }
 
     if (auto cls = arch_class(); cls != elf::arch_class::class32 && cls != elf::arch_class::class64) {
-        throw invalid_file_exception("invalid class {}", cls);
+        throw invalid_file("invalid class {}", cls);
     }
 
     if (auto order = byte_order(); order != elf::endian::lsb && order != elf::endian::msb) {
-        throw invalid_file_exception("invalid byte order {}", order);
+        throw invalid_file("invalid byte order {}", order);
     }
 
     if (hdr.e_ident[EI_VERSION] != EV_CURRENT && hdr.e_version != EV_CURRENT) {
-        throw invalid_file_exception("unsupported version {:d}", hdr.e_ident[EI_VERSION]);
+        throw invalid_file("unsupported version {:d}", hdr.e_ident[EI_VERSION]);
     }
 
     if (auto abi = this->abi(); abi != elf::abi::SysV) {
-        throw invalid_file_exception("unsupported abi {}", abi);
+        throw invalid_file("unsupported abi {}", abi);
     }
 
     if (auto type = object_type(); type != elf::object_type::shared_object) {
-        throw invalid_file_exception("unsupported object type {}", type);
+        throw invalid_file("unsupported object type {}", type);
     }
 
     if (auto mach = machine(); mach != elf::machine::RiscV) {
-        throw invalid_file_exception("unsupported machine type {}", mach);
+        throw invalid_file("unsupported machine type {}", mach);
     }
 
     if (entry() == 0) {
-        throw invalid_file_exception("executable requires an entrypoint");
+        throw invalid_file("executable requires an entrypoint");
     }
 
     std::cerr << entry() << '\n';
