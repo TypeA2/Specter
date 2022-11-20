@@ -14,12 +14,21 @@
 #include <util/formatting.hpp>
 #include <util/aligned_memory.hpp>
 
-class invalid_read : public std::runtime_error {
+class invalid_access : public std::runtime_error {
+    public:
+    template <typename... Args>
+    invalid_access(fmt::format_string<Args...> fmt, Args&&... args)
+        : std::runtime_error(fmt::format(fmt, std::forward<Args>(args)...)) {
+
+    }
+};
+
+class invalid_read : public invalid_access {
     public:
     invalid_read(uintptr_t addr, size_t size);
 };
 
-class invalid_write : public std::runtime_error {
+class invalid_write : public invalid_access {
     public:
     invalid_write(uintptr_t addr, size_t size);
 };

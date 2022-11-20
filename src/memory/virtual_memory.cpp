@@ -79,7 +79,7 @@ memory& virtual_memory::write_byte(uintptr_t addr, uint8_t val) {
 
 memory& virtual_memory::write_half(uintptr_t addr, uint16_t val) {
     _written += 2;
-    return get(addr, 16, operation::write).write_half(addr, val);
+    return get(addr, 2, operation::write).write_half(addr, val);
 }
 
 memory& virtual_memory::write_word(uintptr_t addr, uint32_t val) {

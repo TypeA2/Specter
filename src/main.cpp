@@ -63,10 +63,16 @@ int main(int argc, char** argv) {
 
     try {
         elf_file elf { opts.executable };
+
         virtual_memory memory = elf.load();
-        
-        std::cerr << memory.contains(0x10000) << ' ' << memory.contains(0x100000 + 0x154) << '\n';
+        auto executor = elf.make_executor();
+
+        int res =  executor->run(memory, elf.entry());
+        std::cerr << "exited with " << res << '\n';
+        return res;
     } catch (invalid_file& e) {
         std::cerr << "invalid executable file: " << e.what() << '\n';
+    } catch (invalid_access& e) {
+        std::cerr << e.what() << '\n';
     }
 }

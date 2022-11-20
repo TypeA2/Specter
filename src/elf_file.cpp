@@ -8,6 +8,8 @@
 
 #include <memory/elf_program_memory.hpp>
 
+#include <execution/rv64_executor.hpp>
+
 namespace fs = std::filesystem;
 
 using namespace magic_enum::ostream_operators;
@@ -29,7 +31,17 @@ Elf64_Ehdr& elf_file::hdr() const {
 }
 
 std::span<Elf64_Phdr> elf_file::programs() const {
-    return std::span{ _mapping.get_at<Elf64_Phdr>(sizeof(Elf64_Ehdr)), hdr().e_phnum };
+    auto& hdr = this->hdr();
+    return std::span(_mapping.get_at<Elf64_Phdr>(hdr.e_phoff), hdr.e_phnum);
+}
+
+std::span<Elf64_Shdr> elf_file::sections() const {
+    auto& hdr = this->hdr();
+    return std::span(_mapping.get_at<Elf64_Shdr>(hdr.e_shoff), hdr.e_shnum);
+}
+
+std::string_view elf_file::str(uint32_t idx) const {
+    return std::string_view(_mapping.get_at<char>(sections()[hdr().e_shstrndx].sh_offset + idx));
 }
 
 elf_file::elf_file(const fs::path& path)
@@ -117,11 +129,12 @@ virtual_memory elf_file::load() {
 
     for (Elf64_Phdr& program : programs()) {
         if (program.p_type == PT_LOAD) {
+            /* Only PT_LOAD needs to actually be mapped */
             auto mem = std::make_unique<elf_program_memory>(
                 std::endian::little,
                 static_cast<elf_program_memory::permissions>(program.p_flags),
                 program.p_vaddr, program.p_memsz, program.p_align,
-                std::span<uint8_t>{ _mapping.get_at<uint8_t>(program.p_offset), program.p_filesz }
+                std::span<uint8_t>(_mapping.get_at<uint8_t>(program.p_offset), program.p_filesz)
             );
 
             res.add(std::move(mem));
@@ -129,4 +142,15 @@ virtual_memory elf_file::load() {
     }
 
     return res;
+}
+
+std::unique_ptr<executor> elf_file::make_executor() {
+    switch (machine()) {
+        case elf::machine::RiscV:
+            return std::make_unique<rv64_executor>();
+        default:
+            break;
+    }
+
+    throw invalid_file("tried to make executor for unsupported file {}", machine());
 }

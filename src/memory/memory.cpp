@@ -4,10 +4,10 @@
 #include <new>
 
 invalid_read::invalid_read(uintptr_t addr, size_t size)
-    : std::runtime_error(fmt::format("invalid read at {:#X} of size {}", addr, size)) { }
+    : invalid_access("invalid read at {:#x} of size {}", addr, size) { }
 
 invalid_write::invalid_write(uintptr_t addr, size_t size)
-    : std::runtime_error(fmt::format("invalid write at {:#X} of size {}", addr, size)) { }
+    : invalid_access("invalid write at {:#x} of size {}", addr, size) { }
 
 template <std::unsigned_integral T>
 [[nodiscard]] T read_data(memory& mem, uintptr_t addr) {

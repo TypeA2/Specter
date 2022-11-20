@@ -13,6 +13,8 @@
 
 #include <memory/virtual_memory.hpp>
 
+#include <execution/executor.hpp>
+
 class invalid_file : public std::runtime_error {
     public:
 
@@ -86,6 +88,8 @@ class elf_file {
     [[nodiscard]] std::span<Elf64_Phdr> programs() const;
     [[nodiscard]] std::span<Elf64_Shdr> sections() const;
 
+    [[nodiscard]] std::string_view str(uint32_t idx) const;
+
     public:
     elf_file(const std::filesystem::path& path);
 
@@ -98,4 +102,6 @@ class elf_file {
     [[nodiscard]] uintptr_t entry() const;
 
     [[nodiscard]] virtual_memory load();
+
+    [[nodiscard]] std::unique_ptr<executor> make_executor();
 };

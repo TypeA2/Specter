@@ -18,11 +18,13 @@ target_link_libraries(specter PRIVATE fmt::fmt)
 
 add_subdirectory(util)
 add_subdirectory(memory)
+add_subdirectory(execution)
 
 target_link_libraries(
     specter PRIVATE
     specter_util
     specter_memory
+    specter_execution
 )
 
 set_target_properties(specter PROPERTIES
