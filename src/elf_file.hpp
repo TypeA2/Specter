@@ -4,11 +4,14 @@
 #include <bit>
 #include <limits>
 #include <concepts>
+#include <span>
 
 #include <elf.h>
 
 #include <util/mapped_file.hpp>
 #include <util/formatting.hpp>
+
+#include <memory/virtual_memory.hpp>
 
 class invalid_file : public std::runtime_error {
     public:
@@ -73,11 +76,15 @@ namespace elf {
     };
 }
 
+using namespace magic_enum::bitwise_operators;
+
 class elf_file {
     std::filesystem::path _path;
     mapped_file _mapping;
 
     [[nodiscard]] Elf64_Ehdr& hdr() const;
+    [[nodiscard]] std::span<Elf64_Phdr> programs() const;
+    [[nodiscard]] std::span<Elf64_Shdr> sections() const;
 
     public:
     elf_file(const std::filesystem::path& path);
@@ -89,4 +96,6 @@ class elf_file {
     [[nodiscard]] elf::machine machine() const;
 
     [[nodiscard]] uintptr_t entry() const;
+
+    [[nodiscard]] virtual_memory load();
 };

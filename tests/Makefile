@@ -1,6 +1,6 @@
 CC32 := gcc
 CC64 := $(CC32)
-CFLAGS := -Wall -Wextra -Wpedantic -std=c17
+CFLAGS := -Wall -Wextra -Wpedantic -std=c17 -nostdlib -nodefaultlibs -static
 CFLAGS32 := -m32
 CFLAGS64 := -m64
 

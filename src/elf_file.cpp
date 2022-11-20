@@ -2,8 +2,11 @@
 
 #include <iostream>
 #include <algorithm>
+#include <iomanip>
 
 #include <fcntl.h>
+
+#include <memory/elf_program_memory.hpp>
 
 namespace fs = std::filesystem;
 
@@ -25,8 +28,12 @@ Elf64_Ehdr& elf_file::hdr() const {
     return *_mapping.get<Elf64_Ehdr>();
 }
 
+std::span<Elf64_Phdr> elf_file::programs() const {
+    return std::span{ _mapping.get_at<Elf64_Phdr>(sizeof(Elf64_Ehdr)), hdr().e_phnum };
+}
+
 elf_file::elf_file(const fs::path& path)
-    : _path{ path }, _mapping{ detail::open_safe(_path) } {
+    : _path { path }, _mapping { detail::open_safe(_path) } {
     
     if (_mapping.size() < sizeof(Elf64_Ehdr)) {
         throw invalid_file("ELF file is too small");
@@ -56,7 +63,7 @@ elf_file::elf_file(const fs::path& path)
         throw invalid_file("unsupported abi {}", abi);
     }
 
-    if (auto type = object_type(); type != elf::object_type::shared_object) {
+    if (auto type = object_type(); type != elf::object_type::executable) {
         throw invalid_file("unsupported object type {}", type);
     }
 
@@ -68,13 +75,17 @@ elf_file::elf_file(const fs::path& path)
         throw invalid_file("executable requires an entrypoint");
     }
 
-    std::cerr << entry() << '\n';
-    std::cerr << hdr.e_flags << '\n';
-    std::cerr << hdr.e_phentsize << '\n';
-    std::cerr << hdr.e_phnum << '\n';
-    std::cerr << hdr.e_shentsize << '\n';
-    std::cerr << hdr.e_shnum << '\n';
-    std::cerr << hdr.e_shstrndx << '\n';
+    if (hdr.e_ehsize != sizeof(Elf64_Ehdr)) {
+        throw invalid_file("unsupported ELF header size (expected {} got {})", sizeof(Elf64_Ehdr), hdr.e_ehsize);
+    }
+
+    if (hdr.e_phentsize != sizeof(Elf64_Phdr)) {
+        throw invalid_file("unsupported program header size (expected {} got {})", sizeof(Elf64_Phdr), hdr.e_phentsize);
+    }
+
+    if (hdr.e_shentsize != sizeof(Elf64_Shdr)) {
+        throw invalid_file("unsupported section header size (expected {} got {})", sizeof(Elf64_Shdr), hdr.e_shentsize);
+    }
 }
 
 elf::arch_class elf_file::arch_class() const {
@@ -99,4 +110,23 @@ elf::machine elf_file::machine() const {
 
 uintptr_t elf_file::entry() const {
     return hdr().e_entry;
+}
+
+virtual_memory elf_file::load() {
+    virtual_memory res { (byte_order() == elf::endian::lsb) ? std::endian::little : std::endian::big };
+
+    for (Elf64_Phdr& program : programs()) {
+        if (program.p_type == PT_LOAD) {
+            auto mem = std::make_unique<elf_program_memory>(
+                std::endian::little,
+                static_cast<elf_program_memory::permissions>(program.p_flags),
+                program.p_vaddr, program.p_memsz, program.p_align,
+                std::span<uint8_t>{ _mapping.get_at<uint8_t>(program.p_offset), program.p_filesz }
+            );
+
+            res.add(std::move(mem));
+        }
+    }
+
+    return res;
 }

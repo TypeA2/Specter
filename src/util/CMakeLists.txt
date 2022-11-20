@@ -1,7 +1,7 @@
 add_library(
 	specter_util
 	"mapped_file.hpp" "mapped_file.cpp"
-    "formatting.hpp"
+    "formatting.hpp"  "aligned_memory.hpp"
 )
 
 target_max_warnings(TARGET specter_util)

@@ -25,13 +25,13 @@ mapped_file::mapped_file(int fd) {
     }
 }
 
-size_t mapped_file::size() const {
-    return _size;
-}
-
 mapped_file::~mapped_file() {
     if (_addr && _addr != MAP_FAILED && munmap(_addr, _size) != 0) {
         std::cerr << "munmap: " << errno << " - " << strerror(errno) << '\n';
         std::terminate();
     }
+}
+
+size_t mapped_file::size() const {
+    return _size;
 }

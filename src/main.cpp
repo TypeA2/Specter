@@ -62,7 +62,10 @@ int main(int argc, char** argv) {
     auto opts = specter_options::parse(argc, argv);
 
     try {
-        elf_file elf{ opts.executable };
+        elf_file elf { opts.executable };
+        virtual_memory memory = elf.load();
+        
+        std::cerr << memory.contains(0x10000) << ' ' << memory.contains(0x100000 + 0x154) << '\n';
     } catch (invalid_file& e) {
         std::cerr << "invalid executable file: " << e.what() << '\n';
     }

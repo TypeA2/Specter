@@ -1,6 +1,8 @@
 add_library(
 	specter_memory
-	"vmem.hpp" "vmem.cpp"
+	"memory.hpp" "memory.cpp"
+    "virtual_memory.hpp" "virtual_memory.cpp"
+    "elf_program_memory.hpp" "elf_program_memory.cpp"
 )
 
 target_max_warnings(TARGET specter_memory)
