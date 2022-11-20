@@ -65,9 +65,10 @@ int main(int argc, char** argv) {
         elf_file elf { opts.executable };
 
         virtual_memory memory = elf.load();
-        auto executor = elf.make_executor();
 
-        int res =  executor->run(memory, elf.entry());
+        std::unique_ptr<executor> executor = elf.make_executor(memory, elf.entry());
+
+        int res = executor->run();
         std::cerr << "exited with " << res << '\n';
         return res;
     } catch (invalid_file& e) {

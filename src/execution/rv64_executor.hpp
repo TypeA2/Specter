@@ -4,5 +4,7 @@
 
 class rv64_executor : public executor {
     public:
-    [[nodiscard]] int run(virtual_memory& mem, uintptr_t entry) override;
+    using executor::executor;
+    
+    [[nodiscard]] int run() override;
 };

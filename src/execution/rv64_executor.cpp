@@ -1,7 +1,8 @@
 #include "rv64_executor.hpp"
 
-int rv64_executor::run(virtual_memory& mem, uintptr_t entry) {
-    (void) mem;
-    (void) entry;
+#include <iostream>
+
+int rv64_executor::run() {
+    std::cerr << std::hex << mem.read_word(entry) << '\n';
     return 42;
 }

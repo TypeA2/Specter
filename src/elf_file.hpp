@@ -103,5 +103,5 @@ class elf_file {
 
     [[nodiscard]] virtual_memory load();
 
-    [[nodiscard]] std::unique_ptr<executor> make_executor();
+    [[nodiscard]] std::unique_ptr<executor> make_executor(virtual_memory& mem, uintptr_t entry);
 };

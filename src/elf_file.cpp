@@ -144,10 +144,10 @@ virtual_memory elf_file::load() {
     return res;
 }
 
-std::unique_ptr<executor> elf_file::make_executor() {
+std::unique_ptr<executor> elf_file::make_executor(virtual_memory& mem, uintptr_t entry) {
     switch (machine()) {
         case elf::machine::RiscV:
-            return std::make_unique<rv64_executor>();
+            return std::make_unique<rv64_executor>(mem, entry);
         default:
             break;
     }
