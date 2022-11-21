@@ -61,12 +61,13 @@ struct specter_options {
 int main(int argc, char** argv) {
     auto opts = specter_options::parse(argc, argv);
 
+    std::unique_ptr<executor> executor;
     try {
         elf_file elf { opts.executable };
 
         virtual_memory memory = elf.load();
 
-        std::unique_ptr<executor> executor = elf.make_executor(memory, elf.entry());
+        executor = elf.make_executor(memory, elf.entry());
 
         int res = executor->run();
         std::cerr << "exited with " << res << '\n';
@@ -74,6 +75,8 @@ int main(int argc, char** argv) {
     } catch (invalid_file& e) {
         std::cerr << "invalid executable file: " << e.what() << '\n';
     } catch (invalid_access& e) {
-        std::cerr << e.what() << '\n';
+        std::cerr << e.what() << "\nSTATE:\n" << *executor << '\n';
+    } catch (illegal_instruction& e) {
+        std::cerr << e.what() << "\nSTATE:\n" << *executor << '\n';
     }
 }

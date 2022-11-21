@@ -76,7 +76,10 @@
 			"variant": "cpp",
 			"complex": "cpp",
 			"set": "cpp",
-			"typeindex": "cpp"
+			"typeindex": "cpp",
+			"csignal": "cpp",
+			"any": "cpp",
+			"future": "cpp"
 		}
 	}
 }

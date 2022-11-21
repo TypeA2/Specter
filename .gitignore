@@ -3,3 +3,5 @@ build/
 tests/bin/*
 
 !**/.gitkeep
+
+*.pdf
