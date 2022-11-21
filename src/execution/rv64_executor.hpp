@@ -13,6 +13,12 @@ using namespace magic_enum::ostream_operators;
 class rv64_illegal_instruction : public illegal_instruction {
     public:
     rv64_illegal_instruction(uintptr_t addr, uint32_t instr);
+    rv64_illegal_instruction(uintptr_t addr, uint32_t instr, const std::string& info);
+
+    template <typename... Args>
+    rv64_illegal_instruction(uintptr_t addr, uint32_t instr, fmt::format_string<Args...> fmt, Args&&... args)
+        : illegal_instruction(
+            addr, fmt::format("{:08x} {}", instr, fmt::format(fmt, std::forward<Args>(args)...))) { }
 };
 
 namespace rv64 {
@@ -21,21 +27,12 @@ namespace rv64 {
     };
 
     enum class reg : uint8_t {
-         x0,  x1,  x2,  x3,  x4,  x5,  x6,  x7,
-         x8,  x9, x10, x11, x12, x13, x14, x15,
-        x16, x17, x18, x19, x20, x21, x22, x23,
-        x24, x25, x26, x27, x28, x29, x30, x31,
-    };
-
-    using namespace std::literals;
-    inline constexpr std::array reg_abi_name {
-        "zero"sv,
-        "ra"sv, "sp"sv, "gp"sv, "tp"sv,
-        "t0"sv, "t1"sv, "t2"sv,
-        "s0"sv, "s1"sv,
-        "a0"sv, "a1"sv, "a2"sv, "a3"sv, "a4"sv, "a5"sv, "a6"sv, "a7"sv,
-        "s2"sv, "s3"sv, "s4"sv, "s5"sv, "s6"sv, "s7"sv, "s8"sv, "s9"sv, "s10"sv, "s11"sv,
-        "t3"sv, "t4"sv, "t5"sv, "t6"sv
+         zero, ra, sp, gp, tp,
+         t0, t1, t2,
+         s0, s1,
+         a0, a1, a2, a3, a4, a5, a6, a7,
+         s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
+         t3, t4, t5, t6,
     };
 
     enum class opc : uint8_t {
@@ -124,6 +121,7 @@ class rv64_executor : public executor {
     bool exec_i_type(int& retval);
 
     void exec_addi();
+    bool exec_syscall(int& retval);
 
     public:
     using executor::executor;

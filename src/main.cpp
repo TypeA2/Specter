@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
         executor = elf.make_executor(memory, elf.entry());
 
         int res = executor->run();
-        std::cerr << "exited with " << res << '\n';
+        std::cerr << "exited with code " << res << "\n\nSTATE:\n" << *executor << '\n';
         return res;
     } catch (invalid_file& e) {
         std::cerr << "invalid executable file: " << e.what() << '\n';

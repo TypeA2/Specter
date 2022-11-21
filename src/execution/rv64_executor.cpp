@@ -3,12 +3,19 @@
 #include <iostream>
 #include <iomanip>
 
+#include <sys/syscall.h>
+
 #include <fmt/ostream.h>
 
 using namespace magic_enum::ostream_operators;
 
 rv64_illegal_instruction::rv64_illegal_instruction(uintptr_t addr, uint32_t instr)
     : illegal_instruction(addr, fmt::format("{:08x}", instr)) {
+
+}
+
+rv64_illegal_instruction::rv64_illegal_instruction(uintptr_t addr, uint32_t instr, const std::string& info)
+    : illegal_instruction(addr, fmt::format("{:08x} {}", instr, info)) {
 
 }
 
@@ -83,7 +90,7 @@ namespace rv64 {
     }
 
     uint64_t regfile::read(reg idx) const {
-        if (idx == reg::x0) {
+        if (idx == reg::zero) {
             return 0;
         }
 
@@ -91,17 +98,19 @@ namespace rv64 {
     }
 
     void regfile::write(reg idx, uint64_t val) {
-        if (idx != reg::x0){
+        if (idx != reg::zero){
             file[static_cast<uint8_t>(idx)] = val;
         }
     }
 
     std::ostream& regfile::print_regs(std::ostream& os) const {
+        using namespace std::literals;
+
         size_t rows = (file.size() / 2);
         for (size_t i = 0; i < rows; ++i) {
             fmt::print(os, "{:>2}={:016x}  {:>3}={:016x}\n",
-                (i == 0 ? "x0"sv : rv64::reg_abi_name[i]), file[i],
-                rv64::reg_abi_name[i + rows], file[i + rows]
+                (i == 0 ? "x0"sv : magic_enum::enum_name(static_cast<reg>(i))), file[i],
+                magic_enum::enum_name(static_cast<reg>(i + rows)), file[i + rows]
             );
         }
 
@@ -153,6 +162,9 @@ bool rv64_executor::exec_i_type(int& retval) {
             exec_addi();
             break;
 
+        case ecall:
+            return exec_syscall(retval);
+
         default:
             throw rv64_illegal_instruction(pc, dec.instr());
     }
@@ -175,6 +187,33 @@ void rv64_executor::exec_addi() {
     }
 
     regfile.write(dec.rd(), rd);
+}
+
+bool rv64_executor::exec_syscall(int& retval) {
+    using enum rv64::reg;
+    if (dec.rs1() != zero || dec.rs2() != zero || dec.rd() != zero || dec.funct3() != 0 || dec.imm_i() > 1) {
+        throw rv64_illegal_instruction(
+            pc, dec.instr(), "invalid ECALL/EBREAK rs1={} rs2={} rd={} funct3={} imm={}",
+            fmt::streamed(dec.rs1()), fmt::streamed(dec.rs2()), fmt::streamed(dec.rd()),
+            dec.funct3(), dec.imm_i());
+    }
+
+    if (dec.imm_i() == 0) {
+        /* ECALL */
+
+        /* a7 contains syscall ID */
+        switch (regfile.read(a7)) {
+            case SYS_exit:
+                /* a0 is exit code */
+                retval = regfile.read(a0);
+                return false;
+        }
+    } else {
+        /* EBREAK */
+        throw rv64_illegal_instruction(pc, dec.instr(), "EBREAK not implemented");
+    }
+ 
+    return true;
 }
 
 int rv64_executor::run() {
