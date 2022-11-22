@@ -19,12 +19,16 @@ uintptr_t illegal_instruction::where() const {
 }
 
 executor::executor(virtual_memory& mem, uintptr_t entry)
-    : mem { mem }, entry { entry }, pc { entry } {
+    : mem { mem }, entry { entry }, pc { entry }, cycles { 0 } {
 
 }
 
 uintptr_t executor::current_pc() const {
     return pc;
+}
+
+size_t executor::current_cycles() const {
+    return cycles;
 }
 
 std::ostream& executor::print_state(std::ostream& os) const {

@@ -1,0 +1,95 @@
+#include "memory_backed_memory.hpp"
+
+#include <bit>
+
+#include <magic_enum.hpp>
+
+using namespace magic_enum::bitwise_operators;
+
+void memory_backed_memory::access_check(uintptr_t addr, size_t size, permissions perms) {
+    if (std::popcount(magic_enum::enum_integer(perms)) > 1) {
+        throw illegal_access("illegal flags for access at {:#x}: {:#x}", addr, magic_enum::enum_integer(perms));
+    }
+
+    bool contained = true;
+    for (size_t i = 0; i < size; ++i) {
+        if (!contains(addr + i)) {
+            contained = false;
+            break;
+        }
+    }
+
+    if (contained) {
+        if ((perms & this->perms) != perms) {
+            switch (perms) {
+                case permissions::R:
+                    throw invalid_read(addr, size);
+                
+                case permissions::W:
+                    throw invalid_write(addr, size);
+
+                default:
+                    throw illegal_access("illegal flags for access at {:#x}: {:#x}", addr, magic_enum::enum_integer(perms));
+            }
+        }
+    } else {
+        switch (perms) {
+            case permissions::R:
+                throw invalid_read(addr, size);
+            
+            case permissions::W:
+                throw invalid_write(addr, size);
+
+            default:
+                throw illegal_access("illegal flags for access at {:#x}: {:#x}", addr, magic_enum::enum_integer(perms));
+        }
+    }
+}
+
+memory_backed_memory::memory_backed_memory(
+    std::endian endian, permissions perms, uintptr_t vaddr, size_t memsize,
+    std::align_val_t alignment, std::span<uint8_t> data)
+    : memory(endian)
+    , perms { perms }, base_addr { vaddr }, size { memsize }, alignment { alignment }
+    , data(new (alignment) uint8_t[size], alignment) {
+    
+    /* Copy supplied memory and pad with zeroes */
+    std::ranges::copy(data, this->data.get());
+    std::fill_n(this->data.get() + data.size(), size - data.size(), 0);
+}
+
+bool memory_backed_memory::contains(uintptr_t addr) const {
+    return (addr >= base_addr) && (addr < (base_addr + size));
+}
+
+uint8_t memory_backed_memory::read_byte(uintptr_t addr) {
+    return read_data<uint8_t>(addr);
+}
+
+uint16_t memory_backed_memory::read_half(uintptr_t addr) {
+    return read_data<uint16_t>(addr);
+}
+
+uint32_t memory_backed_memory::read_word(uintptr_t addr) {
+    return read_data<uint32_t>(addr);
+}
+
+uint64_t memory_backed_memory::read_dword(uintptr_t addr) {
+    return read_data<uint64_t>(addr);
+}
+
+memory& memory_backed_memory::write_byte(uintptr_t addr, uint8_t val) {
+    return write_data<uint8_t>(addr, val);
+}
+
+memory& memory_backed_memory::write_half(uintptr_t addr, uint16_t val) {
+    return write_data<uint16_t>(addr, val);
+}
+
+memory& memory_backed_memory::write_word(uintptr_t addr, uint32_t val) {
+    return write_data<uint32_t>(addr, val);
+}
+
+memory& memory_backed_memory::write_dword(uintptr_t addr, uint64_t val) {
+    return write_data<uint64_t>(addr, val);
+}

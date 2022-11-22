@@ -9,6 +9,8 @@
 
 #include <cxxopts.hpp>
 
+#include <fmt/ostream.h>
+
 #include "elf_file.hpp"
 
 namespace fs = std::filesystem;
@@ -62,21 +64,36 @@ int main(int argc, char** argv) {
     auto opts = specter_options::parse(argc, argv);
 
     std::unique_ptr<executor> executor;
+    virtual_memory memory(std::endian::native);
+    int res = 0;
     try {
         elf_file elf { opts.executable };
 
-        virtual_memory memory = elf.load();
+        memory = elf.load();
 
         executor = elf.make_executor(memory, elf.entry());
 
-        int res = executor->run();
-        std::cerr << "exited with code " << res << "\n\nSTATE:\n" << *executor << '\n';
-        return res;
+        res = executor->run();
+
+        fmt::print(std::cerr, "exited with code {}\n\n", res);
+        
     } catch (invalid_file& e) {
-        std::cerr << "invalid executable file: " << e.what() << '\n';
-    } catch (invalid_access& e) {
-        std::cerr << e.what() << "\nSTATE:\n" << *executor << '\n';
+        fmt::print(std::cerr, "invalid executable file: {}\n", e.what());
+        return EXIT_FAILURE;
+    } catch (illegal_access& e) {
+        fmt::print(std::cerr, "illegal_access: {}\n", e.what());
     } catch (illegal_instruction& e) {
-        std::cerr << e.what() << "\nSTATE:\n" << *executor << '\n';
+        fmt::print(std::cerr, "illegal_instruction: {}\n", e.what());
     }
+
+    auto multiple = [](size_t n) { return (n == 1) ? "" : "s"; };
+
+    if (executor) {
+        fmt::print(std::cerr, "STATE:\n{}\n", fmt::streamed(*executor));
+        fmt::print(std::cerr, "{} instruction{} executed\n", executor->current_cycles(), multiple(executor->current_cycles()));
+        fmt::print(std::cerr, "{} byte{} read, {} byte{} written\n",
+            memory.bytes_read(), multiple(memory.bytes_read()), memory.bytes_written(), multiple(memory.bytes_written()));
+    }
+
+    return res;
 }

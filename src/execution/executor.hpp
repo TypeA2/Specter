@@ -19,6 +19,7 @@ class executor {
     virtual_memory& mem;
     uintptr_t entry;
     uintptr_t pc;
+    size_t cycles;
     
     public:
     executor(virtual_memory& mem, uintptr_t entry);
@@ -32,6 +33,7 @@ class executor {
 
     [[nodiscard]] virtual int run() = 0;
     [[nodiscard]] uintptr_t current_pc() const;
+    [[nodiscard]] size_t current_cycles() const;
 
     virtual std::ostream& print_state(std::ostream& os) const;
 };

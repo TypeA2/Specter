@@ -36,25 +36,31 @@ namespace rv64 {
     };
 
     enum class opc : uint8_t {
-        addi = 0b0010011,
+        addi  = 0b0010011,
         ecall = 0b1110011,
     };
 
+    /* instr & MASK_OPCODE_COMPRESSED == OPC_FULL_SIZE means 32-bit instr, else 16-bit */
+    static constexpr uint32_t OPC_FULL_SIZE = 0b11;
+
+    static constexpr uint32_t MASK_OPCODE_COMPRESSED = 0b11;
     static constexpr uint32_t MASK_OPCODE = 0b1111111;
     static constexpr uint32_t MASK_REG = 0b11111;
     static constexpr uint32_t MASK_FUNCT3 = 0b111;
+    static constexpr uint32_t MASK_FUNCT7 = 0b1111111;
     static constexpr uint32_t MASK_I_TYPE_IMM = 0xFFF;
 
     static constexpr uint32_t IDX_RD = 7;
     static constexpr uint32_t IDX_FUNCT3 = 12;
+    static constexpr uint32_t IDX_FUNCT7 = 25;
     static constexpr uint32_t IDX_RS1 = 15;
     static constexpr uint32_t IDX_RS2 = 20;
     static constexpr uint32_t IDX_I_TYPE_IMM = 20;
 
     static constexpr uint32_t CNT_I_TYPE_IMM = 12;
 
-    template <size_t from, std::unsigned_integral U = uint64_t>
-    [[nodiscard]] inline constexpr U sign_extend(U val) {
+    template <size_t from, std::unsigned_integral T = uint64_t, std::unsigned_integral U = uint64_t>
+    [[nodiscard]] inline constexpr U sign_extend(T val) {
         if (val & (U{1} << (from - 1))) {
             /* Sign bit is 1, extend */
             return ~((U{1} << from) - 1) | val;
@@ -85,10 +91,12 @@ namespace rv64 {
         [[nodiscard]] reg rs2() const;
 
         [[nodiscard]] uint8_t funct3() const;
+        [[nodiscard]] uint8_t funct7() const;
 
         [[nodiscard]] uint64_t imm_i() const;
 
         [[nodiscard]] size_t pc_increment() const;
+        [[nodiscard]] bool is_compressed() const;
 
         std::ostream& format_instr(std::ostream& os) const;
     };
@@ -104,8 +112,13 @@ namespace rv64 {
     };
 }
 
-std::ostream& operator<<(std::ostream& os, const rv64::decoder& dec);
-std::ostream& operator<<(std::ostream& os, const rv64::regfile& reg);
+inline std::ostream& operator<<(std::ostream& os, const rv64::decoder& dec) {
+    return dec.format_instr(os);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const rv64::regfile& reg) {
+    return reg.print_regs(os);
+}
 
 class rv64_executor : public executor {
     rv64::decoder dec;

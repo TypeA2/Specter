@@ -5,8 +5,9 @@
 #include <iomanip>
 
 #include <fcntl.h>
+#include <sys/resource.h>
 
-#include <memory/elf_program_memory.hpp>
+#include <memory/memory_backed_memory.hpp>
 
 #include <execution/rv64_executor.hpp>
 
@@ -127,13 +128,20 @@ uintptr_t elf_file::entry() const {
 virtual_memory elf_file::load() {
     virtual_memory res { (byte_order() == elf::endian::lsb) ? std::endian::little : std::endian::big };
 
+    rlimit rlim;
+    if (getrlimit(RLIMIT_STACK, &rlim) != 0) {
+        throw std::system_error(errno, std::generic_category(), "getrlimit");
+    }
+    
+    //rlim.rlim_cur
+
     for (Elf64_Phdr& program : programs()) {
         if (program.p_type == PT_LOAD) {
             /* Only PT_LOAD needs to actually be mapped */
-            auto mem = std::make_unique<elf_program_memory>(
+            auto mem = std::make_unique<memory_backed_memory>(
                 std::endian::little,
-                static_cast<elf_program_memory::permissions>(program.p_flags),
-                program.p_vaddr, program.p_memsz, program.p_align,
+                static_cast<memory_backed_memory::permissions>(program.p_flags),
+                program.p_vaddr, program.p_memsz, std::align_val_t { program.p_align },
                 std::span<uint8_t>(_mapping.get_at<uint8_t>(program.p_offset), program.p_filesz)
             );
 

@@ -9,8 +9,6 @@
 class virtual_memory : public memory {
     std::vector<std::unique_ptr<memory>> _bank;
 
-    std::endian _endianness;
-
     size_t _read;
     size_t _written;
 
@@ -32,8 +30,6 @@ class virtual_memory : public memory {
 
     [[nodiscard]] size_t bytes_read() const;
     [[nodiscard]] size_t bytes_written() const;
-
-    [[nodiscard]] std::endian endianness() const override;
 
     [[nodiscard]] bool contains(uintptr_t addr) const override;
 

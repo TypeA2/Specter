@@ -79,7 +79,9 @@
 			"typeindex": "cpp",
 			"csignal": "cpp",
 			"any": "cpp",
-			"future": "cpp"
+			"future": "cpp",
+			"unistd.h": "c",
+			"*.ipp": "cpp"
 		}
 	}
 }

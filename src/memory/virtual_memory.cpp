@@ -18,12 +18,12 @@ memory& virtual_memory::get(uintptr_t addr, size_t size, operation op) const {
 }
 
 virtual_memory::virtual_memory(std::endian endian)
-    : _endianness { endian }, _read { 0 }, _written { 0 } {
+    : memory(endian), _read { 0 }, _written { 0 } {
 
 }
 
 void virtual_memory::add(std::unique_ptr<memory> mem) {
-    if (mem->endianness() != _endianness) {
+    if (mem->byte_order() != this->byte_order()) {
         throw std::invalid_argument("endianness mismatch");
     }
 
@@ -36,10 +36,6 @@ size_t virtual_memory::bytes_read() const {
 
 size_t virtual_memory::bytes_written() const {
     return _written;
-}
-
-std::endian virtual_memory::endianness() const {
-    return _endianness;
 }
 
 bool virtual_memory::contains(uintptr_t addr) const {
