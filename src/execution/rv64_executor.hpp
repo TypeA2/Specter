@@ -36,6 +36,7 @@ namespace rv64 {
     };
 
     enum class opc : uint8_t {
+        jal   = 0b1101111,
         addi  = 0b0010011,
         store = 0b0100011,
         ecall = 0b1110011,
@@ -52,6 +53,10 @@ namespace rv64 {
     static constexpr uint32_t MASK_I_TYPE_IMM = 0xFFF;
     static constexpr uint32_t MASK_S_TYPE_IMM_LO = 0b11111;
     static constexpr uint32_t MASK_S_TYPE_IMM_HI = 0b111111100000;
+    static constexpr uint32_t MASK_J_TYPE_19_12 = 0xFF000;
+    static constexpr uint32_t MASK_J_TYPE_11 = 0b100000000000;
+    static constexpr uint32_t MASK_J_TYPE_10_1 = 0b11111111110;
+    static constexpr uint32_t MASK_J_TYPE_SIGN = 0x100000;
 
     static constexpr uint32_t IDX_RD = 7;
     static constexpr uint32_t IDX_FUNCT3 = 12;
@@ -61,9 +66,14 @@ namespace rv64 {
     static constexpr uint32_t IDX_I_TYPE_IMM = 20;
     static constexpr uint32_t IDX_S_TYPE_IMM_LO = 7;
     static constexpr uint32_t IDX_S_TYPE_IMM_HI = 20;
+    static constexpr uint32_t IDX_J_TYPE_IMM = 12;
+    static constexpr uint32_t IDX_J_TYPE_11 = 9;
+    static constexpr uint32_t IDX_J_TYPE_10_1 = 20;
+    static constexpr uint32_t IDX_J_TYPE_SIGN = 31;
 
     static constexpr uint32_t CNT_I_TYPE_IMM = 12;
     static constexpr uint32_t CNT_S_TYPE_IMM = 12;
+    static constexpr uint32_t CNT_J_TYPE_IMM = 21;
 
     template <size_t from, std::unsigned_integral T = uint64_t, std::unsigned_integral U = uint64_t>
     [[nodiscard]] inline constexpr U sign_extend(T val) {
@@ -101,9 +111,11 @@ namespace rv64 {
 
         [[nodiscard]] uint64_t imm_i() const;
         [[nodiscard]] uint64_t imm_s() const;
+        [[nodiscard]] uint64_t imm_j() const;
 
         [[nodiscard]] size_t pc_increment() const;
         [[nodiscard]] bool is_compressed() const;
+        [[nodiscard]] bool is_branch() const;
 
         std::ostream& format_instr(std::ostream& os) const;
     };
@@ -140,9 +152,13 @@ class rv64_executor : public executor {
 
     bool exec_i_type(int& retval);
     bool exec_s_type();
+    bool exec_j_type();
 
     void exec_addi();
     bool exec_syscall(int& retval);
+
+    /* Increment PC */
+    void next_instr();
 
     public:
     rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp);

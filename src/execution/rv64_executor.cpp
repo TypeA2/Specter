@@ -26,6 +26,10 @@ namespace {
 
     [[nodiscard]] std::string_view instr_name(const rv64::decoder& dec) {
         switch (dec.opcode()) {
+            case rv64::opc::jal: {
+                return "jal";
+            }
+
             case rv64::opc::addi: {
                 switch (dec.funct3()) {
                     case 0b000: return "addi";
@@ -78,6 +82,7 @@ namespace {
         [[maybe_unused]] uint8_t funct7 = dec.funct7();
 
         uint64_t imm_i = dec.imm_i();
+        uint64_t imm_j = dec.imm_j();
         
         if (op == opc::addi && funct3 == 0 && rs1 == reg::zero) {
             if (imm_i == 0) {
@@ -92,6 +97,8 @@ namespace {
                 fmt::print(os, "li {}, {}", fmt::streamed(rd), int64_t(imm_i));
                 return true;
             }
+        } else if (op == opc::jal && rd == reg::zero) {
+            fmt::print("j {:x} <{:+}>", dec.pc() + int64_t(imm_j), int64_t(imm_j));
         }
 
         return false;
@@ -110,8 +117,13 @@ namespace {
 
         uint64_t imm_i = dec.imm_i();
         uint64_t imm_s = dec.imm_s();
+        uint64_t imm_j = dec.imm_j();
 
         switch (op) {
+            case opc::jal:
+                fmt::print(os, "{},{:x} <{:+}>", fmt::streamed(rd), dec.pc() + int64_t(imm_j), int64_t(imm_j));
+                break;
+
             case opc::addi:
                 fmt::print(os, "{},{},{}", fmt::streamed(rd), fmt::streamed(rs1), int64_t(imm_i));
                 break;
@@ -151,6 +163,9 @@ namespace rv64 {
 
             case store:
                 return instr_type::S;
+
+            case jal:
+                return instr_type::J;
         }
 
         throw rv64_illegal_instruction(_pc, _instr);
@@ -194,6 +209,16 @@ namespace rv64 {
             ((_instr >> IDX_S_TYPE_IMM_LO) & MASK_S_TYPE_IMM_LO) | ((_instr >> IDX_S_TYPE_IMM_HI) & MASK_S_TYPE_IMM_HI));
     }
 
+    uint64_t decoder::imm_j() const {
+        /* Start with 8 bits at position 12 */
+        uint32_t imm = _instr & MASK_J_TYPE_19_12;
+        imm |= (_instr >> IDX_J_TYPE_11) & MASK_J_TYPE_11;
+        imm |= (_instr >> IDX_J_TYPE_10_1) & MASK_J_TYPE_10_1;
+        imm |= (_instr >> IDX_J_TYPE_SIGN) & MASK_J_TYPE_SIGN;
+
+        return sign_extend<CNT_J_TYPE_IMM>(imm);
+    }
+
     size_t decoder::pc_increment() const {
         return is_compressed() ? 2 : 4;
     }
@@ -202,11 +227,21 @@ namespace rv64 {
         return ((_instr & MASK_OPCODE_COMPRESSED) != OPC_FULL_SIZE);
     }
 
+    bool decoder::is_branch() const {
+        switch (opcode()) {
+            case opc::jal:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
     std::ostream& decoder::format_instr(std::ostream& os) const {
         if (is_compressed()) {
-            fmt::print(os, "{:#08x}:  {:04x}       ", _pc, _instr);
+            fmt::print(os, "{:x}:  {:04x}       ", _pc, _instr);
         } else {
-            fmt::print(os, "{:#08x}:  {:08x}   ", _pc, _instr);
+            fmt::print(os, "{:x}:  {:08x}   ", _pc, _instr);
         }
 
         if (!format_if_pseudoisntr(os, *this)) {
@@ -266,6 +301,7 @@ bool rv64_executor::exec(int& retval) {
             break;
 
         case rv64::instr_type::J:
+            return exec_j_type();
             break;
 
         case rv64::instr_type::U:
@@ -327,6 +363,22 @@ bool rv64_executor::exec_s_type() {
     return true;
 }
 
+bool rv64_executor::exec_j_type() {
+    uint64_t rd;
+    switch (dec.opcode()) {
+        case rv64::opc::jal:
+            rd = dec.pc() + 4;
+            pc = pc + int64_t(dec.imm_j());
+            break;
+
+        default:
+            throw rv64_illegal_instruction(pc, dec.instr(), "unimplemented J-type instruction");
+    }
+
+    regfile.write(dec.rd(), rd);
+    return true;
+}
+
 void rv64_executor::exec_addi() {
     uint64_t rs1 = regfile.read(dec.rs1());
     uint64_t imm = dec.imm_i();
@@ -373,6 +425,14 @@ bool rv64_executor::exec_syscall(int& retval) {
     return true;
 }
 
+void rv64_executor::next_instr() {
+    if (dec.is_branch()) {
+
+    } else {
+        pc += dec.pc_increment();
+    }
+}
+
 rv64_executor::rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp)
     : executor(mem, entry, sp) {
     regfile.write(rv64::reg::sp, sp);
@@ -385,8 +445,7 @@ int rv64_executor::run() {
     while (cont) {
         fetch();
         cont = exec(retval);
-
-        pc += dec.pc_increment();
+        next_instr();
 
         cycles += 1;
 
