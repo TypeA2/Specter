@@ -18,8 +18,8 @@ uintptr_t illegal_instruction::where() const {
     return _addr;
 }
 
-executor::executor(virtual_memory& mem, uintptr_t entry)
-    : mem { mem }, entry { entry }, pc { entry }, cycles { 0 } {
+executor::executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp)
+    : mem { mem }, entry { entry }, pc { entry }, sp { sp }, cycles { 0 } {
 
 }
 

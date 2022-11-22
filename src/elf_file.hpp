@@ -100,6 +100,10 @@ class elf_file {
     [[nodiscard]] elf::machine machine() const;
 
     [[nodiscard]] uintptr_t entry() const;
+    [[nodiscard]] uintptr_t stack_base() const;
+    [[nodiscard]] uintptr_t stack_limit() const;
+    [[nodiscard]] size_t stack_size() const;
+    [[nodiscard]] size_t page_size() const;
 
     [[nodiscard]] virtual_memory load();
 

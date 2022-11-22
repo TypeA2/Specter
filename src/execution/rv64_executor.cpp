@@ -45,6 +45,16 @@ namespace {
                 }
             }
 
+            case rv64::opc::store: {
+                switch (dec.funct3()) {
+                    case 0b000: return "sb";
+                    case 0b001: return "sh";
+                    case 0b010: return "sw";
+                    case 0b011: return "sd";
+                    default: throw_err(dec);
+                }
+            }
+
             case rv64::opc::ecall: {
                 switch (dec.funct7()) {
                     case 0: return "ecall";
@@ -89,7 +99,7 @@ namespace {
     
     void format_args(std::ostream& os, const rv64::decoder& dec) {
         using namespace rv64;
-        instr_type type = dec.type();
+        [[maybe_unused]] instr_type type = dec.type();
         opc op = dec.opcode();
         reg rd = dec.rd();
         reg rs1 = dec.rs1();
@@ -99,19 +109,18 @@ namespace {
         [[maybe_unused]] uint8_t funct7 = dec.funct7();
 
         uint64_t imm_i = dec.imm_i();
+        uint64_t imm_s = dec.imm_s();
 
-        switch (type) {
-            case instr_type::I:
-                switch (op) {
-                    case opc::addi:
-                        fmt::print(os, "{}, {}, {}", fmt::streamed(rd), fmt::streamed(rs1), int64_t(imm_i));
-                        break;
+        switch (op) {
+            case opc::addi:
+                fmt::print(os, "{},{},{}", fmt::streamed(rd), fmt::streamed(rs1), int64_t(imm_i));
+                break;
 
-                    case opc::ecall:
-                        break;
+            case opc::store:
+                fmt::print(os, "{},{}({})", fmt::streamed(rs2), imm_s, fmt::streamed(rs1));
+                break;
 
-                    default: throw_err(dec);
-                }
+            case opc::ecall:
                 break;
 
             default: throw_err(dec);
@@ -139,6 +148,9 @@ namespace rv64 {
             case addi:
             case ecall:
                 return instr_type::I;
+
+            case store:
+                return instr_type::S;
         }
 
         throw rv64_illegal_instruction(_pc, _instr);
@@ -175,6 +187,11 @@ namespace rv64 {
 
     uint64_t decoder::imm_i() const {
         return sign_extend<CNT_I_TYPE_IMM>((_instr >> IDX_I_TYPE_IMM) & MASK_I_TYPE_IMM);
+    }
+
+    uint64_t decoder::imm_s() const {
+        return sign_extend<CNT_S_TYPE_IMM>(
+            ((_instr >> IDX_S_TYPE_IMM_LO) & MASK_S_TYPE_IMM_LO) | ((_instr >> IDX_S_TYPE_IMM_HI) & MASK_S_TYPE_IMM_HI));
     }
 
     size_t decoder::pc_increment() const {
@@ -243,7 +260,7 @@ bool rv64_executor::exec(int& retval) {
             return exec_i_type(retval);
 
         case rv64::instr_type::S:
-            break;
+            return exec_s_type();
 
         case rv64::instr_type::B:
             break;
@@ -255,11 +272,20 @@ bool rv64_executor::exec(int& retval) {
             break;
     }
 
+    std::stringstream ss;
+    try {
+        ss << dec;
+
+        fmt::print(std::cerr, "error on:\n{}\n", ss.str());
+    } catch (const illegal_instruction&){
+        /* pass */
+        fmt::print(std::cerr, "error on unknown instruction\n");
+    }
+
     throw rv64_illegal_instruction(pc, dec.instr());
 }
 
 bool rv64_executor::exec_i_type(int& retval) {
-    (void) retval;
     using enum rv64::opc;
     switch (dec.opcode()) {
         case addi:
@@ -271,6 +297,31 @@ bool rv64_executor::exec_i_type(int& retval) {
 
         default:
             throw rv64_illegal_instruction(pc, dec.instr());
+    }
+
+    return true;
+}
+
+bool rv64_executor::exec_s_type() {
+    uint64_t src = regfile.read(dec.rs2());
+    uint64_t addr = regfile.read(dec.rs1()) + static_cast<int64_t>(dec.imm_i());
+
+    switch (dec.funct3()) {
+        case 0b000:
+            mem.write_byte(addr, src);
+            break;
+
+        case 0b001:
+            mem.write_half(addr, src);
+            break;
+
+        case 0b010:
+            mem.write_word(addr, src);
+            break;
+
+        case 0b011:
+            mem.write_dword(addr, src);
+            break;
     }
 
     return true;
@@ -322,6 +373,11 @@ bool rv64_executor::exec_syscall(int& retval) {
     return true;
 }
 
+rv64_executor::rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp)
+    : executor(mem, entry, sp) {
+    regfile.write(rv64::reg::sp, sp);
+}
+
 int rv64_executor::run() {
     int retval = 0;
 
@@ -341,7 +397,7 @@ int rv64_executor::run() {
 }
 
 std::ostream& rv64_executor::print_state(std::ostream& os) const {
-    fmt::print(os, "RISC-V 64-bit executor, entrypoint = {:#08x}, pc = {:#08x}\n", entry, pc);
-    fmt::print(os, "{}", fmt::streamed(regfile));
+    fmt::print(os, "RISC-V 64-bit executor, entrypoint = {:#08x}, pc = {:#08x}, sp = {:#08x}\n", entry, pc, sp);
+    os << regfile;
     return os;
 }

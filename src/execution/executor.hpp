@@ -19,10 +19,11 @@ class executor {
     virtual_memory& mem;
     uintptr_t entry;
     uintptr_t pc;
+    uintptr_t sp;
     size_t cycles;
     
     public:
-    executor(virtual_memory& mem, uintptr_t entry);
+    executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp);
 
     executor(const executor&) = delete;
     executor& operator=(const executor&) = delete;

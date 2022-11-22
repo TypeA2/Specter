@@ -5,6 +5,7 @@
 #include <iomanip>
 
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/resource.h>
 
 #include <memory/memory_backed_memory.hpp>
@@ -125,27 +126,50 @@ uintptr_t elf_file::entry() const {
     return hdr().e_entry;
 }
 
-virtual_memory elf_file::load() {
-    virtual_memory res { (byte_order() == elf::endian::lsb) ? std::endian::little : std::endian::big };
+uintptr_t elf_file::stack_base() const {
+    (void) this;
+    return ((uintptr_t{1} << 47) - 1) & ~(stack_size() - 1);
+}
+
+uintptr_t elf_file::stack_limit() const {
+    return stack_base() - stack_size() + 1;
+}
+
+size_t elf_file::stack_size() const {
+    (void) this;
 
     rlimit rlim;
     if (getrlimit(RLIMIT_STACK, &rlim) != 0) {
         throw std::system_error(errno, std::generic_category(), "getrlimit");
     }
-    
-    //rlim.rlim_cur
+
+    return rlim.rlim_cur;
+}
+
+size_t elf_file::page_size() const {
+    (void) this;
+
+    return sysconf(_SC_PAGESIZE);
+}
+
+virtual_memory elf_file::load() {
+    virtual_memory res { (byte_order() == elf::endian::lsb) ? std::endian::little : std::endian::big };
+
+    /* _SC_PAGESIZE is guaranteed to be >0 */
+    res.add<memory_backed_memory>(
+        std::endian::little, memory_backed_memory::permissions::R | memory_backed_memory::permissions::W,
+        stack_limit(), stack_size(), std::align_val_t { page_size() }
+    );
 
     for (Elf64_Phdr& program : programs()) {
         if (program.p_type == PT_LOAD) {
             /* Only PT_LOAD needs to actually be mapped */
-            auto mem = std::make_unique<memory_backed_memory>(
+            res.add<memory_backed_memory>(
                 std::endian::little,
                 static_cast<memory_backed_memory::permissions>(program.p_flags),
                 program.p_vaddr, program.p_memsz, std::align_val_t { program.p_align },
                 std::span<uint8_t>(_mapping.get_at<uint8_t>(program.p_offset), program.p_filesz)
             );
-
-            res.add(std::move(mem));
         }
     }
 
@@ -155,7 +179,7 @@ virtual_memory elf_file::load() {
 std::unique_ptr<executor> elf_file::make_executor(virtual_memory& mem, uintptr_t entry) {
     switch (machine()) {
         case elf::machine::RiscV:
-            return std::make_unique<rv64_executor>(mem, entry);
+            return std::make_unique<rv64_executor>(mem, entry, stack_base());
         default:
             break;
     }

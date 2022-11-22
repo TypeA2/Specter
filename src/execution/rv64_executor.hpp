@@ -37,6 +37,7 @@ namespace rv64 {
 
     enum class opc : uint8_t {
         addi  = 0b0010011,
+        store = 0b0100011,
         ecall = 0b1110011,
     };
 
@@ -49,6 +50,8 @@ namespace rv64 {
     static constexpr uint32_t MASK_FUNCT3 = 0b111;
     static constexpr uint32_t MASK_FUNCT7 = 0b1111111;
     static constexpr uint32_t MASK_I_TYPE_IMM = 0xFFF;
+    static constexpr uint32_t MASK_S_TYPE_IMM_LO = 0b11111;
+    static constexpr uint32_t MASK_S_TYPE_IMM_HI = 0b111111100000;
 
     static constexpr uint32_t IDX_RD = 7;
     static constexpr uint32_t IDX_FUNCT3 = 12;
@@ -56,8 +59,11 @@ namespace rv64 {
     static constexpr uint32_t IDX_RS1 = 15;
     static constexpr uint32_t IDX_RS2 = 20;
     static constexpr uint32_t IDX_I_TYPE_IMM = 20;
+    static constexpr uint32_t IDX_S_TYPE_IMM_LO = 7;
+    static constexpr uint32_t IDX_S_TYPE_IMM_HI = 20;
 
     static constexpr uint32_t CNT_I_TYPE_IMM = 12;
+    static constexpr uint32_t CNT_S_TYPE_IMM = 12;
 
     template <size_t from, std::unsigned_integral T = uint64_t, std::unsigned_integral U = uint64_t>
     [[nodiscard]] inline constexpr U sign_extend(T val) {
@@ -94,6 +100,7 @@ namespace rv64 {
         [[nodiscard]] uint8_t funct7() const;
 
         [[nodiscard]] uint64_t imm_i() const;
+        [[nodiscard]] uint64_t imm_s() const;
 
         [[nodiscard]] size_t pc_increment() const;
         [[nodiscard]] bool is_compressed() const;
@@ -132,12 +139,13 @@ class rv64_executor : public executor {
     [[nodiscard]] bool exec(int& retval);
 
     bool exec_i_type(int& retval);
+    bool exec_s_type();
 
     void exec_addi();
     bool exec_syscall(int& retval);
 
     public:
-    using executor::executor;
+    rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp);
     
     [[nodiscard]] int run() override;
 

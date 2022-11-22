@@ -28,6 +28,12 @@ class virtual_memory : public memory {
 
     void add(std::unique_ptr<memory> mem);
 
+    template <typename T, typename... Args>
+    void add(Args&&... args) {
+        add(std::make_unique<T>(std::forward<Args>(args)...));
+    }
+
+
     [[nodiscard]] size_t bytes_read() const;
     [[nodiscard]] size_t bytes_written() const;
 
