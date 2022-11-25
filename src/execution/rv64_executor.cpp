@@ -67,6 +67,14 @@ namespace {
                 }
             }
 
+            case rv64::opc::c_addi: {
+                if (dec.c_rd_rs1() == rv64::reg::zero) {
+                    return "c.nop";
+                } else {
+                    return "c.addi";
+                }
+            }
+
             case rv64::opc::c_jr: {
                 switch (dec.c_funct4()) {
                     case 0b1000: {
@@ -156,7 +164,13 @@ namespace {
                 fmt::print(os, "{},{}({})", fmt::streamed(rs2), imm_s, fmt::streamed(rs1));
                 break;
 
-            case rv64::opc::c_jr: {
+            case opc::ecall:
+                break;
+
+            case opc::c_addi:
+                break;
+
+            case opc::c_jr: {
                 switch (dec.c_funct4()) {
                     case 0b1000: {
                         if (dec.c_rs2() == rv64::reg::zero) {
@@ -213,6 +227,9 @@ namespace rv64 {
             case jal:
                 return instr_type::J;
 
+            case c_addi:
+                return instr_type::CI;
+
             case c_jr:
                 return instr_type::CR;
         }
@@ -225,7 +242,8 @@ namespace rv64 {
             /* First 2 and last 3 bits compose the opcode
              * Since first 2 indicate compresed or non-compressed, there is no overlap
              */
-            auto op = magic_enum::enum_cast<opc>((_instr & MASK_OPCODE_COMPRESSED) | (_instr >> IDX_OPCODE_COMPRESSED_HI));
+            auto op = magic_enum::enum_cast<opc>(
+                (_instr & MASK_OPCODE_COMPRESSED) | ((_instr >> IDX_OPCODE_COMPRESSED_HI) & MASK_OPCODE_COMPRESSED_HI));
             if (!op) {
                 throw rv64_illegal_instruction(_pc, _instr, "invalid compressed instruction");
             }

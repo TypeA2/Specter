@@ -38,13 +38,16 @@ namespace rv64 {
     };
 
     enum class opc : uint8_t {
-        jal   = 0b1101111,
-        addi  = 0b0010011,
-        store = 0b0100011,
-        ecall = 0b1110011,
+        jal    = 0b1101111,
+        addi   = 0b0010011,
+        store  = 0b0100011,
+        ecall  = 0b1110011,
+
+        /* c.nop/c.addi */
+        c_addi = 0b0000001,
 
         /* c.jr, c.mv, c.ebreak, c.jalr, c.add */
-        c_jr  = 0b0010010,
+        c_jr   = 0b0010010,
     };
 
     /* instr & MASK_OPCODE_COMPRESSED == OPC_FULL_SIZE means 32-bit instr, else 16-bit */
@@ -52,6 +55,7 @@ namespace rv64 {
 
     enum masks : uint32_t {
         MASK_OPCODE_COMPRESSED = 0b11,
+        MASK_OPCODE_COMPRESSED_HI = 0b11100,
         MASK_OPCODE = 0b1111111,
         MASK_REG = 0b11111,
         MASK_FUNCT3 = 0b111,
