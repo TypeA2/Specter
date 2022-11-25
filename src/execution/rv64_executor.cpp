@@ -66,6 +66,30 @@ namespace {
                     default: throw_err(dec);
                 }
             }
+
+            case rv64::opc::c_jr: {
+                switch (dec.c_funct4()) {
+                    case 0b1000: {
+                        if (dec.c_rs2() == rv64::reg::zero) {
+                            return "c.jr";
+                        } else {
+                            return "c.mv";
+                        }
+                    }
+
+                    case 0b1001: {
+                        if (dec.c_rs2() == rv64::reg::zero && dec.c_rd_rs1() == rv64::reg::zero) {
+                            return "c.ebreak";
+                        } else if (dec.c_rs2() == rv64::reg::zero) {
+                            return "c.jalr";
+                        } else {
+                            return "c.add";
+                        }
+                    }
+
+                    default: throw_err(dec);
+                }
+            }
         }
 
         throw_err(dec);
@@ -132,8 +156,30 @@ namespace {
                 fmt::print(os, "{},{}({})", fmt::streamed(rs2), imm_s, fmt::streamed(rs1));
                 break;
 
-            case opc::ecall:
+            case rv64::opc::c_jr: {
+                switch (dec.c_funct4()) {
+                    case 0b1000: {
+                        if (dec.c_rs2() == rv64::reg::zero) {
+                            fmt::print(os, "{}", fmt::streamed(dec.c_rd_rs1()));
+                        } else {
+                            fmt::print(os, "{},{}", fmt::streamed(dec.c_rd_rs1()), fmt::streamed(dec.c_rs2()));
+                        }
+                        break;
+                    }
+
+                    case 0b1001: {
+                        if (dec.c_rs2() != rv64::reg::zero && dec.c_rd_rs1() == rv64::reg::zero) {
+                            fmt::print(os, "{0},{0},{1}", fmt::streamed(dec.c_rd_rs1()), fmt::streamed(dec.c_rs2()));
+                        } else if (dec.c_rs2() == rv64::reg::zero) {
+                            fmt::print(os, "{}", fmt::streamed(dec.c_rd_rs1()));
+                        } 
+                        break;
+                    }
+
+                    default: throw_err(dec);
+                }
                 break;
+            }
 
             default: throw_err(dec);
         }
@@ -166,18 +212,33 @@ namespace rv64 {
 
             case jal:
                 return instr_type::J;
+
+            case c_jr:
+                return instr_type::CR;
         }
 
         throw rv64_illegal_instruction(_pc, _instr);
     }
 
     opc decoder::opcode() const {
-        auto op = magic_enum::enum_cast<opc>(_instr & MASK_OPCODE);
-        if (!op) {
-            throw rv64_illegal_instruction(_pc, _instr);
-        } 
+        if (is_compressed()) {
+            /* First 2 and last 3 bits compose the opcode
+             * Since first 2 indicate compresed or non-compressed, there is no overlap
+             */
+            auto op = magic_enum::enum_cast<opc>((_instr & MASK_OPCODE_COMPRESSED) | (_instr >> IDX_OPCODE_COMPRESSED_HI));
+            if (!op) {
+                throw rv64_illegal_instruction(_pc, _instr, "invalid compressed instruction");
+            }
+            
+            return op.value();
+        } else {
+            auto op = magic_enum::enum_cast<opc>(_instr & MASK_OPCODE);
+            if (!op) {
+                throw rv64_illegal_instruction(_pc, _instr);
+            }
 
-        return op.value();
+            return op.value();
+        }
     }
 
     reg decoder::rd() const {
@@ -192,12 +253,24 @@ namespace rv64 {
         return static_cast<reg>((_instr >> IDX_RS2) & MASK_REG);
     }
 
+    reg decoder::c_rs2() const {
+        return static_cast<reg>((_instr >> IDX_C_RS2) & MASK_REG);
+    }
+
+    reg decoder::c_rd_rs1() const {
+        return static_cast<reg>((_instr >> IDX_C_RD_RS1) & MASK_REG);
+    }
+
     uint8_t decoder::funct3() const {
         return (_instr >> IDX_FUNCT3) & MASK_FUNCT3;
     }
 
     uint8_t decoder::funct7() const {
         return (_instr >> IDX_FUNCT7) & MASK_FUNCT7;
+    }
+
+    uint8_t decoder::c_funct4() const {
+        return (_instr >> IDX_C_FUNCT4) & MASK_C_FUNCT4;
     }
 
     uint64_t decoder::imm_i() const {

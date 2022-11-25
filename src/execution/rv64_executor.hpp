@@ -23,7 +23,9 @@ class rv64_illegal_instruction : public illegal_instruction {
 
 namespace rv64 {
     enum class instr_type {
-        R, I, S, B, U, J
+        R, I, S, B, U, J,
+
+        CR, CI, CSS, CIW, CL, CS, CA, CB, CJ,
     };
 
     enum class reg : uint8_t {
@@ -40,40 +42,55 @@ namespace rv64 {
         addi  = 0b0010011,
         store = 0b0100011,
         ecall = 0b1110011,
+
+        /* c.jr, c.mv, c.ebreak, c.jalr, c.add */
+        c_jr  = 0b0010010,
     };
 
     /* instr & MASK_OPCODE_COMPRESSED == OPC_FULL_SIZE means 32-bit instr, else 16-bit */
     static constexpr uint32_t OPC_FULL_SIZE = 0b11;
 
-    static constexpr uint32_t MASK_OPCODE_COMPRESSED = 0b11;
-    static constexpr uint32_t MASK_OPCODE = 0b1111111;
-    static constexpr uint32_t MASK_REG = 0b11111;
-    static constexpr uint32_t MASK_FUNCT3 = 0b111;
-    static constexpr uint32_t MASK_FUNCT7 = 0b1111111;
-    static constexpr uint32_t MASK_I_TYPE_IMM = 0xFFF;
-    static constexpr uint32_t MASK_S_TYPE_IMM_LO = 0b11111;
-    static constexpr uint32_t MASK_S_TYPE_IMM_HI = 0b111111100000;
-    static constexpr uint32_t MASK_J_TYPE_19_12 = 0xFF000;
-    static constexpr uint32_t MASK_J_TYPE_11 = 0b100000000000;
-    static constexpr uint32_t MASK_J_TYPE_10_1 = 0b11111111110;
-    static constexpr uint32_t MASK_J_TYPE_SIGN = 0x100000;
+    enum masks : uint32_t {
+        MASK_OPCODE_COMPRESSED = 0b11,
+        MASK_OPCODE = 0b1111111,
+        MASK_REG = 0b11111,
+        MASK_FUNCT3 = 0b111,
+        MASK_FUNCT7 = 0b1111111,
+        MASK_I_TYPE_IMM = 0xFFF,
+        MASK_S_TYPE_IMM_LO = 0b11111,
+        MASK_S_TYPE_IMM_HI = 0b1111111 << 5,
+        MASK_J_TYPE_19_12 = 0xFF << 12,
+        MASK_J_TYPE_11 = 0b1 << 11,
+        MASK_J_TYPE_10_1 = 0b11111111110,
+        MASK_J_TYPE_SIGN = 0b1 << 30,
+        MASK_C_FUNCT4 = 0b1111,
+        MASK_C_JR_IMM1 = 0b1,
+    };
 
-    static constexpr uint32_t IDX_RD = 7;
-    static constexpr uint32_t IDX_FUNCT3 = 12;
-    static constexpr uint32_t IDX_FUNCT7 = 25;
-    static constexpr uint32_t IDX_RS1 = 15;
-    static constexpr uint32_t IDX_RS2 = 20;
-    static constexpr uint32_t IDX_I_TYPE_IMM = 20;
-    static constexpr uint32_t IDX_S_TYPE_IMM_LO = 7;
-    static constexpr uint32_t IDX_S_TYPE_IMM_HI = 20;
-    static constexpr uint32_t IDX_J_TYPE_IMM = 12;
-    static constexpr uint32_t IDX_J_TYPE_11 = 9;
-    static constexpr uint32_t IDX_J_TYPE_10_1 = 20;
-    static constexpr uint32_t IDX_J_TYPE_SIGN = 31;
+    enum indices : uint32_t {
+        IDX_OPCODE_COMPRESSED_HI = 11,
+        IDX_RD = 7,
+        IDX_FUNCT3 = 12,
+        IDX_FUNCT7 = 25,
+        IDX_RS1 = 15,
+        IDX_RS2 = 20,
+        IDX_I_TYPE_IMM = 20,
+        IDX_S_TYPE_IMM_LO = 7,
+        IDX_S_TYPE_IMM_HI = 20,
+        IDX_J_TYPE_IMM = 12,
+        IDX_J_TYPE_11 = 9,
+        IDX_J_TYPE_10_1 = 20,
+        IDX_J_TYPE_SIGN = 31,
+        IDX_C_RS2 = 2,
+        IDX_C_RD_RS1 = 7,
+        IDX_C_FUNCT4 = 12,
+    };
 
-    static constexpr uint32_t CNT_I_TYPE_IMM = 12;
-    static constexpr uint32_t CNT_S_TYPE_IMM = 12;
-    static constexpr uint32_t CNT_J_TYPE_IMM = 21;
+    enum counts : uint32_t {
+        CNT_I_TYPE_IMM = 12,
+        CNT_S_TYPE_IMM = 12,
+        CNT_J_TYPE_IMM = 21,
+    };
 
     template <size_t from, std::unsigned_integral T = uint64_t, std::unsigned_integral U = uint64_t>
     [[nodiscard]] inline constexpr U sign_extend(T val) {
@@ -106,8 +123,13 @@ namespace rv64 {
         [[nodiscard]] reg rs1() const;
         [[nodiscard]] reg rs2() const;
 
+        [[nodiscard]] reg c_rs2() const;
+        [[nodiscard]] reg c_rd_rs1() const;
+
         [[nodiscard]] uint8_t funct3() const;
         [[nodiscard]] uint8_t funct7() const;
+
+        [[nodiscard]] uint8_t c_funct4() const;
 
         [[nodiscard]] uint64_t imm_i() const;
         [[nodiscard]] uint64_t imm_s() const;
