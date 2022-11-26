@@ -14,6 +14,12 @@ class illegal_instruction : public std::runtime_error {
     [[nodiscard]] virtual uintptr_t where() const;
 };
 
+class invalid_syscall : public std::runtime_error {
+    public:
+    invalid_syscall(uintptr_t addr, uint64_t id);
+    invalid_syscall(uintptr_t addr, uint64_t id, std::span<uint64_t> args);
+};
+
 class executor {
     protected:
     virtual_memory& mem;

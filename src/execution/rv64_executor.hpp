@@ -43,11 +43,14 @@ namespace rv64 {
         store  = 0b0100011,
         ecall  = 0b1110011,
 
+        c_addi4spn = 0b0000000,
+
         /* c.nop/c.addi */
         c_addi = 0b0000001,
 
         /* c.jr, c.mv, c.ebreak, c.jalr, c.add */
         c_jr   = 0b0010010,
+        c_sdsp = 0b0011110,
     };
 
     /* instr & MASK_OPCODE_COMPRESSED == OPC_FULL_SIZE means 32-bit instr, else 16-bit */
@@ -69,6 +72,15 @@ namespace rv64 {
         MASK_J_TYPE_SIGN = 0b1 << 30,
         MASK_C_FUNCT4 = 0b1111,
         MASK_C_JR_IMM1 = 0b1,
+        MASK_CI_IMM_LO = 0b11111,
+        MASK_CI_IMM_HI = 0b1 << 5,
+        MASK_CSS_IMM_LO = 0b111 << 3,
+        MASK_CSS_IMM_HI = 0b111 << 6,
+        MASK_CIW_IMM_2 = 0b1 << 2,
+        MASK_CIW_IMM_3 = 0b1 << 3,
+        MASK_CIW_IMM_5_4 = 0b11 << 4,
+        MASK_CIW_IMM_9_6 = 0b1111 << 6,
+        MASK_CIW_CL_RD = 0b111,
     };
 
     enum indices : uint32_t {
@@ -88,12 +100,28 @@ namespace rv64 {
         IDX_C_RS2 = 2,
         IDX_C_RD_RS1 = 7,
         IDX_C_FUNCT4 = 12,
+        IDX_CI_IMM_LO = 2,
+        IDX_CI_IMM_HI = 7,
+        IDX_CSS_IMM_LO = 7,
+        IDX_CSS_IMM_HI = 1,
+        IDX_CIW_IMM_2 = 4,
+        IDX_CIW_IMM_3 = 2,
+        IDX_CIW_IMM_5_4 = 7,
+        IDX_CIW_IMM_9_6 = 1,
+        IDX_CIW_CL_RD = 2,
     };
 
     enum counts : uint32_t {
         CNT_I_TYPE_IMM = 12,
         CNT_S_TYPE_IMM = 12,
         CNT_J_TYPE_IMM = 21,
+        CNT_CI_TYPE_IMM = 6,
+    };
+
+    /* https://github.com/bminor/glibc/blob/master/sysdeps/unix/sysv/linux/riscv/rv64/arch-syscall.h */
+    enum class syscall : uint64_t {
+        exit = 93,
+        exit_group = 94,
     };
 
     template <size_t from, std::unsigned_integral T = uint64_t, std::unsigned_integral U = uint64_t>
@@ -130,6 +158,8 @@ namespace rv64 {
         [[nodiscard]] reg c_rs2() const;
         [[nodiscard]] reg c_rd_rs1() const;
 
+        [[nodiscard]] reg c_ciw_cl_rd() const;
+
         [[nodiscard]] uint8_t funct3() const;
         [[nodiscard]] uint8_t funct7() const;
 
@@ -138,6 +168,9 @@ namespace rv64 {
         [[nodiscard]] uint64_t imm_i() const;
         [[nodiscard]] uint64_t imm_s() const;
         [[nodiscard]] uint64_t imm_j() const;
+        [[nodiscard]] uint64_t imm_ci() const;
+        [[nodiscard]] uint64_t imm_css() const;
+        [[nodiscard]] uint64_t imm_ciw() const;
 
         [[nodiscard]] size_t pc_increment() const;
         [[nodiscard]] bool is_compressed() const;
@@ -179,6 +212,10 @@ class rv64_executor : public executor {
     bool exec_i_type(int& retval);
     bool exec_s_type();
     bool exec_j_type();
+    bool exec_ci_type();
+    bool exec_css_type();
+    bool exec_ciw_type();
+    bool exec_cr_type(int& retval);
 
     void exec_addi();
     bool exec_syscall(int& retval);

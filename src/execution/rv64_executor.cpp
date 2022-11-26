@@ -25,12 +25,14 @@ namespace {
     }
 
     [[nodiscard]] std::string_view instr_name(const rv64::decoder& dec) {
+        using namespace rv64;
+
         switch (dec.opcode()) {
-            case rv64::opc::jal: {
+            case opc::jal: {
                 return "jal";
             }
 
-            case rv64::opc::addi: {
+            case opc::addi: {
                 switch (dec.funct3()) {
                     case 0b000: return "addi";
                     case 0b001: return "slli";
@@ -49,7 +51,7 @@ namespace {
                 }
             }
 
-            case rv64::opc::store: {
+            case opc::store: {
                 switch (dec.funct3()) {
                     case 0b000: return "sb";
                     case 0b001: return "sh";
@@ -59,7 +61,7 @@ namespace {
                 }
             }
 
-            case rv64::opc::ecall: {
+            case opc::ecall: {
                 switch (dec.funct7()) {
                     case 0: return "ecall";
                     case 1: return "ebreak";
@@ -67,18 +69,22 @@ namespace {
                 }
             }
 
-            case rv64::opc::c_addi: {
-                if (dec.c_rd_rs1() == rv64::reg::zero) {
+            case opc::c_addi4spn: {
+                return "c.addi4spn";
+            }
+
+            case opc::c_addi: {
+                if (dec.c_rd_rs1() == reg::zero) {
                     return "c.nop";
                 } else {
                     return "c.addi";
                 }
             }
 
-            case rv64::opc::c_jr: {
+            case opc::c_jr: {
                 switch (dec.c_funct4()) {
                     case 0b1000: {
-                        if (dec.c_rs2() == rv64::reg::zero) {
+                        if (dec.c_rs2() == reg::zero) {
                             return "c.jr";
                         } else {
                             return "c.mv";
@@ -86,9 +92,9 @@ namespace {
                     }
 
                     case 0b1001: {
-                        if (dec.c_rs2() == rv64::reg::zero && dec.c_rd_rs1() == rv64::reg::zero) {
+                        if (dec.c_rs2() == reg::zero && dec.c_rd_rs1() == reg::zero) {
                             return "c.ebreak";
-                        } else if (dec.c_rs2() == rv64::reg::zero) {
+                        } else if (dec.c_rs2() == reg::zero) {
                             return "c.jalr";
                         } else {
                             return "c.add";
@@ -98,6 +104,12 @@ namespace {
                     default: throw_err(dec);
                 }
             }
+
+            case opc::c_sdsp: {
+                return "c.sdsp";
+            }
+
+            default: break;
         }
 
         throw_err(dec);
@@ -140,62 +152,92 @@ namespace {
         using namespace rv64;
         [[maybe_unused]] instr_type type = dec.type();
         opc op = dec.opcode();
-        reg rd = dec.rd();
-        reg rs1 = dec.rs1();
-        [[maybe_unused]] reg rs2 = dec.rs2();
 
-        [[maybe_unused]] uint8_t funct3 = dec.funct3();
-        [[maybe_unused]] uint8_t funct7 = dec.funct7();
+        if (dec.is_compressed()) {
+            reg rd_rs1 = dec.c_rd_rs1();
+            reg rs2 = dec.c_rs2();
+            reg ciw_cl_rd = dec.c_ciw_cl_rd();
 
-        uint64_t imm_i = dec.imm_i();
-        uint64_t imm_s = dec.imm_s();
-        uint64_t imm_j = dec.imm_j();
+            uint8_t c_funct4 = dec.c_funct4();
+            
+            uint64_t imm_ci = dec.imm_ci();
+            uint64_t imm_css = dec.imm_css();
+            uint64_t imm_ciw = dec.imm_ciw();
 
-        switch (op) {
-            case opc::jal:
-                fmt::print(os, "{},{:x} <{:+}>", fmt::streamed(rd), dec.pc() + int64_t(imm_j), int64_t(imm_j));
-                break;
-
-            case opc::addi:
-                fmt::print(os, "{},{},{}", fmt::streamed(rd), fmt::streamed(rs1), int64_t(imm_i));
-                break;
-
-            case opc::store:
-                fmt::print(os, "{},{}({})", fmt::streamed(rs2), imm_s, fmt::streamed(rs1));
-                break;
-
-            case opc::ecall:
-                break;
-
-            case opc::c_addi:
-                break;
-
-            case opc::c_jr: {
-                switch (dec.c_funct4()) {
-                    case 0b1000: {
-                        if (dec.c_rs2() == rv64::reg::zero) {
-                            fmt::print(os, "{}", fmt::streamed(dec.c_rd_rs1()));
-                        } else {
-                            fmt::print(os, "{},{}", fmt::streamed(dec.c_rd_rs1()), fmt::streamed(dec.c_rs2()));
-                        }
-                        break;
-                    }
-
-                    case 0b1001: {
-                        if (dec.c_rs2() != rv64::reg::zero && dec.c_rd_rs1() == rv64::reg::zero) {
-                            fmt::print(os, "{0},{0},{1}", fmt::streamed(dec.c_rd_rs1()), fmt::streamed(dec.c_rs2()));
-                        } else if (dec.c_rs2() == rv64::reg::zero) {
-                            fmt::print(os, "{}", fmt::streamed(dec.c_rd_rs1()));
-                        } 
-                        break;
-                    }
-
-                    default: throw_err(dec);
+            switch (op) {
+                case opc::c_addi4spn: {
+                    fmt::print(os, "{},sp,{}", fmt::streamed(ciw_cl_rd), imm_ciw);
+                    break;
                 }
-                break;
-            }
 
-            default: throw_err(dec);
+                case opc::c_addi:
+                    if (rd_rs1 != reg::zero) {
+                        fmt::print(os, "{},{}", fmt::streamed(rd_rs1), int64_t(imm_ci));
+                    }
+                    break;
+
+                case opc::c_jr: {
+                    switch (c_funct4) {
+                        case 0b1000: {
+                            if (rs2 == reg::zero) {
+                                fmt::print(os, "{}", fmt::streamed(dec.c_rd_rs1()));
+                            } else {
+                                fmt::print(os, "{},{}", fmt::streamed(dec.c_rd_rs1()), fmt::streamed(rs2));
+                            }
+                            break;
+                        }
+
+                        case 0b1001: {
+                            if (rs2 != reg::zero && rd_rs1 == reg::zero) {
+                                fmt::print(os, "{0},{0},{1}", fmt::streamed(dec.c_rd_rs1()), fmt::streamed(rs2));
+                            } else if (rs2 == reg::zero) {
+                                fmt::print(os, "{}", fmt::streamed(rs2));
+                            } 
+                            break;
+                        }
+
+                        default: throw_err(dec);
+                    }
+                    break;
+                }
+
+                case opc::c_sdsp: {
+                    fmt::print(os, "{},{}(sp)", fmt::streamed(rs2), imm_css);
+                    break;
+                }
+
+                default: throw_err(dec);
+            }
+        } else {
+            reg rd = dec.rd();
+            reg rs1 = dec.rs1();
+            [[maybe_unused]] reg rs2 = dec.rs2();
+
+            [[maybe_unused]] uint8_t funct3 = dec.funct3();
+            [[maybe_unused]] uint8_t funct7 = dec.funct7();
+
+            uint64_t imm_i = dec.imm_i();
+            uint64_t imm_s = dec.imm_s();
+            uint64_t imm_j = dec.imm_j();
+
+            switch (op) {
+                case opc::jal:
+                    fmt::print(os, "{},{:x} <{:+}>", fmt::streamed(rd), dec.pc() + int64_t(imm_j), int64_t(imm_j));
+                    break;
+
+                case opc::addi:
+                    fmt::print(os, "{},{},{}", fmt::streamed(rd), fmt::streamed(rs1), int64_t(imm_i));
+                    break;
+
+                case opc::store:
+                    fmt::print(os, "{},{}({})", fmt::streamed(rs2), imm_s, fmt::streamed(rs1));
+                    break;
+
+                case opc::ecall:
+                    break;
+
+                default: throw_err(dec);
+            }
         }
     }
 }
@@ -227,11 +269,17 @@ namespace rv64 {
             case jal:
                 return instr_type::J;
 
+            case c_addi4spn:
+                return instr_type::CIW;
+
             case c_addi:
                 return instr_type::CI;
 
             case c_jr:
                 return instr_type::CR;
+
+            case c_sdsp:
+                return instr_type::CSS;
         }
 
         throw rv64_illegal_instruction(_pc, _instr);
@@ -279,6 +327,10 @@ namespace rv64 {
         return static_cast<reg>((_instr >> IDX_C_RD_RS1) & MASK_REG);
     }
 
+    reg decoder::c_ciw_cl_rd() const {
+        return static_cast<reg>(((_instr >> IDX_CIW_CL_RD) & MASK_CIW_CL_RD) + 8);
+    }
+
     uint8_t decoder::funct3() const {
         return (_instr >> IDX_FUNCT3) & MASK_FUNCT3;
     }
@@ -300,6 +352,10 @@ namespace rv64 {
             ((_instr >> IDX_S_TYPE_IMM_LO) & MASK_S_TYPE_IMM_LO) | ((_instr >> IDX_S_TYPE_IMM_HI) & MASK_S_TYPE_IMM_HI));
     }
 
+    uint64_t decoder::imm_css() const {
+        return ((_instr >> IDX_CSS_IMM_LO) & MASK_CSS_IMM_LO) | ((_instr >> IDX_CSS_IMM_HI) & MASK_CSS_IMM_HI);
+    }
+
     uint64_t decoder::imm_j() const {
         /* Start with 8 bits at position 12 */
         uint32_t imm = _instr & MASK_J_TYPE_19_12;
@@ -308,6 +364,19 @@ namespace rv64 {
         imm |= (_instr >> IDX_J_TYPE_SIGN) & MASK_J_TYPE_SIGN;
 
         return sign_extend<CNT_J_TYPE_IMM>(imm);
+    }
+
+    uint64_t decoder::imm_ci() const {
+        return sign_extend<CNT_CI_TYPE_IMM>(((_instr >> IDX_CI_IMM_LO) & MASK_CI_IMM_LO) | ((_instr >> IDX_CI_IMM_HI) & MASK_CI_IMM_HI));
+    }
+
+    uint64_t decoder::imm_ciw() const {
+        uint32_t imm = (_instr >> IDX_CIW_IMM_2) & MASK_CIW_IMM_2;
+        imm |= (_instr >> IDX_CIW_IMM_3) & MASK_CIW_IMM_3;
+        imm |= (_instr >> IDX_CIW_IMM_5_4) & MASK_CIW_IMM_5_4;
+        imm |= (_instr >> IDX_CIW_IMM_9_6) & MASK_CIW_IMM_9_6;
+
+        return imm;
     }
 
     size_t decoder::pc_increment() const {
@@ -378,25 +447,38 @@ void rv64_executor::fetch() {
 }
 
 bool rv64_executor::exec(int& retval) {
+    using namespace rv64;
+
     switch (dec.type()) {
-        case rv64::instr_type::R:
+        case instr_type::R:
             break;
 
-        case rv64::instr_type::I:
+        case instr_type::I:
             return exec_i_type(retval);
 
-        case rv64::instr_type::S:
+        case instr_type::S:
             return exec_s_type();
 
-        case rv64::instr_type::B:
+        case instr_type::B:
             break;
 
-        case rv64::instr_type::J:
+        case instr_type::J:
             return exec_j_type();
+
+        case instr_type::U:
             break;
 
-        case rv64::instr_type::U:
-            break;
+        case instr_type::CI:
+            return exec_ci_type();
+
+        case instr_type::CSS:
+            return exec_css_type();
+
+        case instr_type::CIW:
+            return exec_ciw_type();
+
+        case instr_type::CR:
+            return exec_cr_type(retval);
     }
 
     std::stringstream ss;
@@ -470,6 +552,104 @@ bool rv64_executor::exec_j_type() {
     return true;
 }
 
+bool rv64_executor::exec_ci_type() {
+    using namespace rv64;
+
+    switch (dec.opcode()) {
+        case opc::c_addi: {
+            if (reg rd_rs1 = dec.c_rd_rs1(); rd_rs1 != reg::zero) {
+                regfile.write(rd_rs1, regfile.read(rd_rs1) + int64_t(dec.imm_ci()));
+            }
+            break;
+        }
+
+        default:
+            throw rv64_illegal_instruction(pc, dec.instr(), "unimplemented CI-type instruction");
+    }
+
+    return true;
+}
+
+bool rv64_executor::exec_css_type() {
+    using namespace rv64;
+
+    switch (dec.opcode()) {
+        case opc::c_sdsp: {
+            mem.write_dword(regfile.read(reg::sp) + dec.imm_css(), regfile.read(dec.c_rs2()));
+            break;
+        }
+
+        default:
+            throw rv64_illegal_instruction(pc, dec.instr(), "unimplemented CSS-type instruction");
+    }
+
+    return true;
+}
+
+bool rv64_executor::exec_ciw_type() {
+    using namespace rv64;
+
+    switch (dec.opcode()) {
+        case opc::c_addi4spn: {
+            regfile.write(dec.c_ciw_cl_rd(), regfile.read(reg::sp) + dec.imm_ciw());
+            break;
+        }
+
+        default:
+            throw rv64_illegal_instruction(pc, dec.instr(), "unimplemented CIW-type instruction");
+    }
+
+    return true;
+}
+
+bool rv64_executor::exec_cr_type(int& retval) {
+    using namespace rv64;
+
+    switch (dec.opcode()) {
+        case opc::c_jr: {
+            reg rs1_rd = dec.c_rd_rs1();
+            reg rs2 = dec.c_rs2();
+            switch (dec.c_funct4()) {
+                case 0b1000: {
+                    if (rs1_rd != reg::zero) {
+                        if (rs2 == reg::zero) {
+                            /* c.jr */
+                            pc = pc + int64_t(regfile.read(rs1_rd));
+                        } else {
+                            /* c.mv */
+                            regfile.write(rs1_rd, regfile.read(rs2));
+                        }
+                    }
+                    break;
+                }
+
+                case 0b1001: {
+                    if (rs2 == reg::zero) {
+                        if (rs1_rd == reg::zero) {
+                            return exec_syscall(retval);
+                        } else {
+                            /* c.jalr */
+                            regfile.write(reg::ra, dec.pc() + 2);
+                            pc = pc + int64_t(regfile.read(rs1_rd));
+                        }
+                    } else if (rs1_rd != reg::zero) {
+                        regfile.write(rs1_rd, regfile.read(rs1_rd) + regfile.read(rs2));
+                    }
+                    break;
+                }
+
+                default: throw_err(dec);
+            }
+            break;
+        }
+
+        default:
+            throw rv64_illegal_instruction(pc, dec.instr(), "unimplemented CR-type instruction");
+    }
+
+    return true;
+}
+
 void rv64_executor::exec_addi() {
     uint64_t rs1 = regfile.read(dec.rs1());
     uint64_t imm = dec.imm_i();
@@ -490,29 +670,49 @@ void rv64_executor::exec_addi() {
 bool rv64_executor::exec_syscall(int& retval) {
     using enum rv64::reg;
 
-    uint64_t imm_i = dec.imm_i();
-    if (dec.rs1() != zero || dec.rs2() != zero || dec.rd() != zero || dec.funct3() != 0 || imm_i > 1) {
-        throw rv64_illegal_instruction(
-            pc, dec.instr(), "invalid ECALL/EBREAK rs1={} rs2={} rd={} funct3={} imm={}",
-            fmt::streamed(dec.rs1()), fmt::streamed(dec.rs2()), fmt::streamed(dec.rd()),
-            dec.funct3(), dec.imm_i());
-    }
-
-    if (imm_i == 0) {
-        /* ECALL */
-
-        /* a7 contains syscall ID */
-        switch (regfile.read(a7)) {
-            case SYS_exit:
-                /* a0 is exit code */
-                retval = regfile.read(a0);
-                return false;
-        }
+    uint64_t syscall_num;
+    if (dec.is_compressed()) {
+        /* C.EBREAK */
+        throw rv64_illegal_instruction(pc, dec.instr(), "C.EBREAK not implemented");
     } else {
-        /* EBREAK */
-        throw rv64_illegal_instruction(pc, dec.instr(), "EBREAK not implemented");
+        uint64_t imm_i = dec.imm_i();
+        if (dec.rs1() != zero || dec.rs2() != zero || dec.rd() != zero || dec.funct3() != 0 || imm_i > 1) {
+            throw rv64_illegal_instruction(
+                pc, dec.instr(), "invalid ECALL/EBREAK rs1={} rs2={} rd={} funct3={} imm={}",
+                fmt::streamed(dec.rs1()), fmt::streamed(dec.rs2()), fmt::streamed(dec.rd()),
+                dec.funct3(), dec.imm_i());
+        }
+
+        if (imm_i == 0) {
+            /* ECALL */
+            syscall_num = regfile.read(a7);
+        } else {
+            /* EBREAK */
+            throw rv64_illegal_instruction(pc, dec.instr(), "EBREAK not implemented");
+        }
     }
- 
+
+    switch (static_cast<rv64::syscall>(syscall_num)) {
+        case rv64::syscall::exit:
+        case rv64::syscall::exit_group:
+            /* a0 is exit code */
+            retval = regfile.read(a0);
+            return false;
+
+        default: {
+            std::vector<uint64_t> args {
+                regfile.read(a0),
+                regfile.read(a1),
+                regfile.read(a2),
+                regfile.read(a3),
+                regfile.read(a4),
+                regfile.read(a5)
+            };
+
+            throw invalid_syscall(pc, syscall_num, args);
+        }
+    }
+    
     return true;
 }
 

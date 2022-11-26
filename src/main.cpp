@@ -84,6 +84,8 @@ int main(int argc, char** argv) {
         fmt::print(std::cerr, "illegal_access: {}\n", e.what());
     } catch (illegal_instruction& e) {
         fmt::print(std::cerr, "illegal_instruction: {}\n", e.what());
+    } catch (invalid_syscall& e) {
+        fmt::print(std::cerr, "invalid syscall: {}\n", e.what());
     }
 
     auto multiple = [](size_t n) { return (n == 1) ? "" : "s"; };
