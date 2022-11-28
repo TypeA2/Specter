@@ -7,6 +7,7 @@
 #include <string_view>
 
 #include <magic_enum.hpp>
+#include <cpptoml.h>
 
 using namespace magic_enum::ostream_operators;
 
@@ -38,6 +39,7 @@ namespace rv64 {
     };
 
     enum class opc : uint8_t {
+        /* RV64I */
         jal    = 0b1101111,
         addi   = 0b0010011,
         store  = 0b0100011,
@@ -136,8 +138,8 @@ namespace rv64 {
     }
 
     class decoder {
-        uintptr_t _pc;
-        uint32_t _instr;
+        uintptr_t _pc{};
+        uint32_t _instr{};
 
         public:
         decoder() = default;
@@ -180,7 +182,7 @@ namespace rv64 {
     };
 
     class regfile {
-        std::array<uint64_t, magic_enum::enum_count<reg>()> file;
+        std::array<uint64_t, magic_enum::enum_count<reg>()> file{};
 
         public:
         uint64_t read(reg idx) const;
@@ -199,6 +201,9 @@ inline std::ostream& operator<<(std::ostream& os, const rv64::regfile& reg) {
 }
 
 class rv64_executor : public executor {
+    std::shared_ptr<cpptoml::table> _config;
+    bool _testmode;
+
     rv64::decoder dec;
 
     rv64::regfile regfile;
@@ -223,8 +228,11 @@ class rv64_executor : public executor {
     /* Increment PC */
     void next_instr();
 
+    void init_registers(std::shared_ptr<cpptoml::table> init);
+    bool validate_registers(std::shared_ptr<cpptoml::table> post, std::ostream& os) const;
+
     public:
-    rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp);
+    rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config);
     
     [[nodiscard]] int run() override;
 

@@ -24,5 +24,13 @@
                 "CMAKE_BUILD_TYPE": "Release"
             }
         }
+    ],
+    "testPresets": [
+        {
+            "name": "test_all",
+            "description": "",
+            "displayName": "",
+            "configurePreset": "release"
+        }
     ]
 }

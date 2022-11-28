@@ -724,9 +724,63 @@ void rv64_executor::next_instr() {
     }
 }
 
-rv64_executor::rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp)
-    : executor(mem, entry, sp) {
+void rv64_executor::init_registers(std::shared_ptr<cpptoml::table> init) {
+    if (!init) {
+        return;
+    }
+
+    for (const auto& [key, val] : *init) {
+        auto reg = magic_enum::enum_cast<rv64::reg>(key);
+        if (!reg.has_value()) {
+            throw std::runtime_error(fmt::format("invalid intialization register: {}", key));
+        }
+
+        auto init = val->as<int64_t>();
+        if (!init) {
+            throw std::runtime_error(fmt::format("invalid initialization value: {}", val->as<std::string>()->get()));
+        }
+
+        regfile.write(reg.value(), init->get());
+    }
+}
+
+bool rv64_executor::validate_registers(std::shared_ptr<cpptoml::table> post, std::ostream& os) const {
+    if (!post) {
+        return true;
+    }
+
+    bool good = true;
+
+    for (const auto& [key, val] : *post) {
+        auto reg = magic_enum::enum_cast<rv64::reg>(key);
+        if (!reg.has_value()) {
+            throw std::runtime_error(fmt::format("invalid postcondition register: {}", key));
+        }
+
+        auto expected = val->as<int64_t>();
+        if (!expected) {
+            throw std::runtime_error(fmt::format("invalid postcondition value: {}", val->as<std::string>()->get()));
+        }
+
+        int64_t actual = regfile.read(reg.value());
+
+        if (actual != expected->get()) {
+            fmt::print(os, "{},{},{}\n", fmt::streamed(reg.value()), expected->get(), actual);
+            good = false;
+        }
+    }
+
+    return good;
+}
+
+rv64_executor::rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config)
+    : executor(mem, entry, sp)
+    , _config { config } {
     regfile.write(rv64::reg::sp, sp);
+
+    init_registers(_config->get_table_qualified("regfile.init"));
+
+    _testmode = !!_config->get_table("testing");
 }
 
 int rv64_executor::run() {
@@ -740,14 +794,43 @@ int rv64_executor::run() {
 
         cycles += 1;
 
-        std::cerr << dec << '\n';
+        if (!_testmode) {
+            std::cerr << dec << '\n';
+        }
+    }
+
+    if (_testmode) {
+        bool good = true;
+
+        /* CSV output stream*/
+        std::stringstream ss;
+        
+        if (!validate_registers(_config->get_table_qualified("testing.regfile.post"), ss)) {
+            good = false;
+        }
+
+        if (auto expected = _config->get_qualified_as<int64_t>("testing.retval")) {
+            if (*expected != retval) {
+                fmt::print(ss,"exit,{},{}\n", *expected, retval);
+                good = false;
+            }
+        }
+
+        retval = good ? 0 : -1;
+
+        /* Add header if there's any output */
+        if (!good) {
+            fmt::print(std::cerr,"what,expected,actual\n{}", ss.str());
+        }
     }
 
     return retval;
 }
 
 std::ostream& rv64_executor::print_state(std::ostream& os) const {
-    fmt::print(os, "RISC-V 64-bit executor, entrypoint = {:#08x}, pc = {:#08x}, sp = {:#08x}\n", entry, pc, sp);
-    os << regfile;
+    if (!_testmode) {
+        fmt::print(os, "RISC-V 64-bit executor, entrypoint = {:#08x}, pc = {:#08x}, sp = {:#08x}\n", entry, pc, sp);
+        os << regfile;
+    }
     return os;
 }

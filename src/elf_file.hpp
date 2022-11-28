@@ -8,6 +8,8 @@
 
 #include <elf.h>
 
+#include <cpptoml.h>
+
 #include <util/mapped_file.hpp>
 #include <util/formatting.hpp>
 
@@ -107,5 +109,6 @@ class elf_file {
 
     [[nodiscard]] virtual_memory load();
 
-    [[nodiscard]] std::unique_ptr<executor> make_executor(virtual_memory& mem, uintptr_t entry);
+    [[nodiscard]] std::unique_ptr<executor> make_executor(
+        virtual_memory& mem, uintptr_t entry, std::shared_ptr<cpptoml::table> config = nullptr);
 };

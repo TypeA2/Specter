@@ -8,6 +8,9 @@ endif()
 
 project(Specter VERSION 1.0.0)
 
+include(CTest)
+
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 add_subdirectory(src)
+add_subdirectory(tests)

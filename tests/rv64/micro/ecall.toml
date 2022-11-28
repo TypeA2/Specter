@@ -1,0 +1,6 @@
+[regfile.init]
+a0 = 42
+a7 = 93
+
+[testing]
+retval = 42

@@ -8,6 +8,7 @@
 #include <bit>
 
 #include <cxxopts.hpp>
+#include <cpptoml.h>
 
 #include <fmt/ostream.h>
 
@@ -18,18 +19,20 @@ namespace fs = std::filesystem;
 struct specter_options {
     fs::path executable;
     std::vector<std::string> argv;
+    std::shared_ptr<cpptoml::table> config = nullptr;
 
     [[nodiscard]] static specter_options parse(int argc, char** argv) {
         cxxopts::Options options(argv[0], "Specter: (R|C)ISC Architecture Emulator");
 
         options.add_options()
             ("h,help", "Show help")
+            ("c,config", "Executor's config file (optional)", cxxopts::value<std::string>())
             ("executable", "Input file to run", cxxopts::value<std::string>())
             ("argv", "Executable arguments", cxxopts::value<std::vector<std::string>>());
             ;
 
         options.parse_positional({ "executable", "argv" });
-        options.custom_help("<executable> [argv... ]");
+        options.custom_help("[-c config.toml] <executable> [argv... ]");
         options.positional_help("");
 
         specter_options opts;
@@ -40,6 +43,16 @@ struct specter_options {
             if (res["help"].as<bool>()) {
                 std::cerr << options.help();
                 std::exit(EXIT_SUCCESS);
+            }
+
+            if (res.count("config") > 0) {
+                auto config = res["config"].as<std::string>();
+
+                if (config == "-") {
+                    opts.config = cpptoml::parser(std::cin).parse();
+                } else {
+                    opts.config = cpptoml::parse_file(config);
+                }
             }
 
             auto argv0 = res["executable"].as<std::string>();
@@ -66,16 +79,20 @@ int main(int argc, char** argv) {
     std::unique_ptr<executor> executor;
     virtual_memory memory(std::endian::native);
     int res = 0;
+
+    bool testmode = opts.config && !!opts.config->get_table("testing");
     try {
         elf_file elf { opts.executable };
 
         memory = elf.load();
 
-        executor = elf.make_executor(memory, elf.entry());
+        executor = elf.make_executor(memory, elf.entry(), opts.config);
 
         res = executor->run();
 
-        fmt::print(std::cerr, "exited with code {}\n\n", res);
+        if (!testmode) {
+            fmt::print(std::cerr, "exited with code {}\n\n", res);
+        }
         
     } catch (invalid_file& e) {
         fmt::print(std::cerr, "invalid executable file: {}\n", e.what());
@@ -90,7 +107,7 @@ int main(int argc, char** argv) {
 
     auto multiple = [](size_t n) { return (n == 1) ? "" : "s"; };
 
-    if (executor) {
+    if (!testmode && executor) {
         fmt::print(std::cerr, "STATE:\n{}\n", fmt::streamed(*executor));
         fmt::print(std::cerr, "{} instruction{} executed\n", executor->current_cycles(), multiple(executor->current_cycles()));
         fmt::print(std::cerr, "{} byte{} read, {} byte{} written\n",
