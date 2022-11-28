@@ -243,6 +243,25 @@ namespace {
 }
 
 namespace rv64 {
+    reg parse_reg(std::string_view str)  {
+        std::optional<reg> res;
+        if (str.starts_with('x')) {
+            int val;
+            auto conv_res = std::from_chars(str.begin() + 1, str.end(), val);
+            if (conv_res.ec != std::errc::invalid_argument && conv_res.ec != std::errc::result_out_of_range) {
+                res = magic_enum::enum_cast<reg>(val);
+            }
+        } else {
+            res = magic_enum::enum_cast<reg>(str);
+        }
+
+        if (res.has_value()) {
+            return res.value();
+        }
+
+        throw std::runtime_error(fmt::format("invalid register: {}", str));
+    }
+
     void decoder::set_instr(uintptr_t pc, uint32_t instr) {
         _pc = pc;
         _instr = instr;
@@ -730,17 +749,12 @@ void rv64_executor::init_registers(std::shared_ptr<cpptoml::table> init) {
     }
 
     for (const auto& [key, val] : *init) {
-        auto reg = magic_enum::enum_cast<rv64::reg>(key);
-        if (!reg.has_value()) {
-            throw std::runtime_error(fmt::format("invalid intialization register: {}", key));
-        }
-
         auto init = val->as<int64_t>();
         if (!init) {
             throw std::runtime_error(fmt::format("invalid initialization value: {}", val->as<std::string>()->get()));
         }
 
-        regfile.write(reg.value(), init->get());
+        regfile.write(rv64::parse_reg(key), init->get());
     }
 }
 
@@ -752,20 +766,17 @@ bool rv64_executor::validate_registers(std::shared_ptr<cpptoml::table> post, std
     bool good = true;
 
     for (const auto& [key, val] : *post) {
-        auto reg = magic_enum::enum_cast<rv64::reg>(key);
-        if (!reg.has_value()) {
-            throw std::runtime_error(fmt::format("invalid postcondition register: {}", key));
-        }
+        auto reg = rv64::parse_reg(key);
 
         auto expected = val->as<int64_t>();
         if (!expected) {
             throw std::runtime_error(fmt::format("invalid postcondition value: {}", val->as<std::string>()->get()));
         }
 
-        int64_t actual = regfile.read(reg.value());
+        int64_t actual = regfile.read(reg);
 
         if (actual != expected->get()) {
-            fmt::print(os, "{},{},{}\n", fmt::streamed(reg.value()), expected->get(), actual);
+            fmt::print(os, "{},{},{}\n", fmt::streamed(reg), expected->get(), actual);
             good = false;
         }
     }
@@ -775,12 +786,15 @@ bool rv64_executor::validate_registers(std::shared_ptr<cpptoml::table> post, std
 
 rv64_executor::rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config)
     : executor(mem, entry, sp)
-    , _config { config } {
+    , _config { config }, _verbose { false } {
     regfile.write(rv64::reg::sp, sp);
 
     init_registers(_config->get_table_qualified("regfile.init"));
 
     _testmode = !!_config->get_table("testing");
+    if (auto val = _config->get_qualified_as<bool>("execution.verbose")) {
+        _verbose = *val;
+    }
 }
 
 int rv64_executor::run() {
@@ -794,7 +808,7 @@ int rv64_executor::run() {
 
         cycles += 1;
 
-        if (!_testmode) {
+        if (_verbose || !_testmode) {
             std::cerr << dec << '\n';
         }
     }

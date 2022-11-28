@@ -5,6 +5,7 @@
 #include <array>
 #include <concepts>
 #include <string_view>
+#include <charconv>
 
 #include <magic_enum.hpp>
 #include <cpptoml.h>
@@ -137,6 +138,8 @@ namespace rv64 {
         }
     }
 
+    [[nodiscard]] reg parse_reg(std::string_view str);
+
     class decoder {
         uintptr_t _pc{};
         uint32_t _instr{};
@@ -203,6 +206,7 @@ inline std::ostream& operator<<(std::ostream& os, const rv64::regfile& reg) {
 class rv64_executor : public executor {
     std::shared_ptr<cpptoml::table> _config;
     bool _testmode;
+    bool _verbose;
 
     rv64::decoder dec;
 

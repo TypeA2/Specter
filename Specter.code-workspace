@@ -81,7 +81,8 @@
 			"any": "cpp",
 			"future": "cpp",
 			"unistd.h": "c",
-			"*.ipp": "cpp"
+			"*.ipp": "cpp",
+			"charconv": "cpp"
 		}
 	}
 }

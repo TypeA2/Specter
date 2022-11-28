@@ -1,11 +1,40 @@
 [regfile.init]
 a0 = 42
 a7 = 93
-s0 = 14
+
+t0 = -1
+t1 = -1
+t2 = -1
+t3 = 0
+t4 = 0
+t5 = 0
+
+t6 = 0xffffffff
+s0 = -1
+s2 = 0xdeadbeefc0ffee
+s3 = -123456789
 
 [testing]
 retval = 42
 depends = "ecall"
 
 [testing.regfile.post]
-s1 = 44
+t0 = 5
+t1 = 1234
+t2 = 2042
+t3 = -1
+t4 = -2042
+t5 = -1234
+
+t6 = 0x100000000
+s0 = 127
+s2 = 0xdeadbeefc107e8
+s3 = -123457900
+
+s4 = 1234
+s5 = 2042
+s6 = -2042
+s7 = -1234
+s8 = 0x100000000
+s9 = 0xdeadbeefc107e8
+s10 = -123457900
