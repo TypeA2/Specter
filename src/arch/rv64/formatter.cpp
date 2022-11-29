@@ -11,6 +11,8 @@ namespace arch::rv64 {
             case opc::addi: {
                 switch (_dec.funct()) {
                     case 0b000: return "addi";
+                    case 0b010: return "slti";
+                    case 0b011: return "sltiu";
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addi");
                 }
             }

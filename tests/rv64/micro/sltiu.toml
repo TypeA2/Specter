@@ -1,0 +1,25 @@
+[execution]
+verbose = true
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+t0 = 0
+t2 = 42
+t4 = 0xfff
+t6 = -42
+s1 = -1234567
+s3 = 2048
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+t1 = 1
+t3 = 0
+t5 = 0
+s0 = 0
+s2 = 1
+s4 = 1

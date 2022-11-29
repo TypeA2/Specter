@@ -506,9 +506,21 @@ bool rv64_executor::_exec_i(int& retval) {
 
             uint64_t rd_val;
             switch (_dec.funct()) {
-                case 0b000: /* addi */
+                case 0b000: { /* addi */
                     rd_val = rs1_val + imm;
                     break;
+                }
+
+                case 0b010: { /* slti */
+                    rd_val = (int64_t(rs1_val) < int64_t(imm)) ? 1 : 0;
+                    break;
+                }
+
+                case 0b011: { /* sltiu */
+                    rd_val = (rs1_val < imm) ? 1 : 0;
+                    break;
+                }
+
                 default: throw arch::rv64::illegal_instruction(pc, _dec.instr(), "addi");
             }
 
@@ -800,7 +812,7 @@ int rv64_executor::run() {
 }
 
 std::ostream& rv64_executor::print_state(std::ostream& os) const {
-    if (!_testmode) {
+    if (_verbose || !_testmode) {
         fmt::print(os, "RISC-V 64-bit executor, entrypoint = {:#08x}, pc = {:#08x}, sp = {:#08x}\n", entry, pc, sp);
         _fmt.regs(os);
     }
