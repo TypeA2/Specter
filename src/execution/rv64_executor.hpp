@@ -2,6 +2,11 @@
 
 #include "executor.hpp"
 
+#include <arch/rv64/rv64.hpp>
+#include <arch/rv64/decoder.hpp>
+#include <arch/rv64/regfile.hpp>
+#include <arch/rv64/formatter.hpp>
+
 #include <array>
 #include <concepts>
 #include <string_view>
@@ -212,22 +217,28 @@ class rv64_executor : public executor {
 
     rv64::regfile regfile;
 
+    arch::rv64::decoder _dec;
+    arch::rv64::regfile _reg;
+    arch::rv64::formatter _fmt;
+
+    uintptr_t _next_pc;
+
     /* Fetch an instruction */
     void fetch();
 
     /* Return whether to continue execution */
     [[nodiscard]] bool exec(int& retval);
 
-    bool exec_i_type(int& retval);
+    bool _exec_i(int& retval);
+
+    bool _syscall(int& retval);
+
     bool exec_s_type();
     bool exec_j_type();
     bool exec_ci_type();
     bool exec_css_type();
     bool exec_ciw_type();
     bool exec_cr_type(int& retval);
-
-    void exec_addi();
-    bool exec_syscall(int& retval);
 
     /* Increment PC */
     void next_instr();

@@ -21,12 +21,14 @@ target_include_directories(specter PUBLIC ${CPPTOML_INCLUDE_DIRS})
 
 add_subdirectory(util)
 add_subdirectory(memory)
+add_subdirectory(arch)
 add_subdirectory(execution)
 
 target_link_libraries(
     specter PRIVATE
     specter_util
     specter_memory
+    specter_arch
     specter_execution
 )
 

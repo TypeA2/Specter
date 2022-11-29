@@ -1,5 +1,6 @@
 #pragma once
 
+#include <arch/arch.hpp>
 #include <memory/virtual_memory.hpp>
 
 class illegal_instruction : public std::runtime_error {

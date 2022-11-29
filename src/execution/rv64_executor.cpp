@@ -458,53 +458,38 @@ namespace rv64 {
 
 void rv64_executor::fetch() {
     uint32_t instr = mem.read_half(pc);
-    dec.set_instr(pc, instr);
-
-    if (!dec.is_compressed()) {
-        dec.set_instr(pc, static_cast<uint32_t>(mem.read_half(pc + 2) << 16) | instr);
+    if (arch::rv64::decoder::compressed(instr)) {
+        _dec.set_instr(pc, instr);
+        _next_pc = pc + 2;
+    } else {
+        _dec.set_instr(pc, static_cast<uint32_t>(mem.read_half(pc + 2) << 16) | instr);
+        _next_pc = pc + 4;
     }
 }
 
 bool rv64_executor::exec(int& retval) {
-    using namespace rv64;
-
-    switch (dec.type()) {
-        case instr_type::R:
+    switch (_dec.type()) {
+        case arch::rv64::instr_type::R:
             break;
 
-        case instr_type::I:
-            return exec_i_type(retval);
+        case arch::rv64::instr_type::I:
+            return _exec_i(retval);
 
-        case instr_type::S:
-            return exec_s_type();
-
-        case instr_type::B:
+        case arch::rv64::instr_type::S:
             break;
 
-        case instr_type::J:
-            return exec_j_type();
-
-        case instr_type::U:
+        case arch::rv64::instr_type::B:
             break;
 
-        case instr_type::CI:
-            return exec_ci_type();
+        case arch::rv64::instr_type::U:
+            break;
 
-        case instr_type::CSS:
-            return exec_css_type();
-
-        case instr_type::CIW:
-            return exec_ciw_type();
-
-        case instr_type::CR:
-            return exec_cr_type(retval);
+        case arch::rv64::instr_type::J:
+            break;
     }
 
-    std::stringstream ss;
     try {
-        ss << dec;
-
-        fmt::print(std::cerr, "error on:\n{}\n", ss.str());
+        fmt::print(std::cerr, "error on:\n{}\n", _fmt.instr());
     } catch (const illegal_instruction&){
         /* pass */
         fmt::print(std::cerr, "error on unknown instruction\n");
@@ -513,18 +498,59 @@ bool rv64_executor::exec(int& retval) {
     throw rv64_illegal_instruction(pc, dec.instr());
 }
 
-bool rv64_executor::exec_i_type(int& retval) {
-    using enum rv64::opc;
-    switch (dec.opcode()) {
-        case addi:
-            exec_addi();
+bool rv64_executor::_exec_i(int& retval) {
+    switch (_dec.opcode()) {
+        case arch::rv64::opc::addi: {
+            uint64_t rs1_val = _reg.read(_dec.rs1());
+            uint64_t imm = _dec.imm();
+
+            uint64_t rd_val;
+            switch (_dec.funct()) {
+                case 0b000: /* addi */
+                    rd_val = rs1_val + imm;
+                    break;
+                default: throw arch::rv64::illegal_instruction(pc, _dec.instr(), "addi");
+            }
+
+            _reg.write(_dec.rd(), rd_val);
+
             break;
+        }
 
-        case ecall:
-            return exec_syscall(retval);
+        case arch::rv64::opc::ecall: {
+            switch (_dec.imm()) {
+                case 0: return _syscall(retval);
+                case 1: throw arch::rv64::illegal_instruction(pc, _dec.instr(), "ebreak");
+            }
+            break;
+        }
 
-        default:
-            throw rv64_illegal_instruction(pc, dec.instr());
+        default: throw arch::rv64::illegal_instruction(pc, _dec.instr(), "i-type");
+    }
+
+    return true;
+}
+
+bool rv64_executor::_syscall(int& retval) {
+    uint64_t id = _reg.read(arch::rv64::reg::a7);
+
+    switch (static_cast<arch::rv64::syscall>(id)) {
+        case arch::rv64::syscall::exit:
+            retval = _reg.read(arch::rv64::reg::a0);
+            return false;
+
+        default: {
+            std::vector<uint64_t> args {
+                _reg.read(arch::rv64::reg::a0),
+                _reg.read(arch::rv64::reg::a1),
+                _reg.read(arch::rv64::reg::a2),
+                _reg.read(arch::rv64::reg::a3),
+                _reg.read(arch::rv64::reg::a4),
+                _reg.read(arch::rv64::reg::a5)
+            };
+
+            throw invalid_syscall(pc, id, args);
+        }
     }
 
     return true;
@@ -645,7 +671,7 @@ bool rv64_executor::exec_cr_type(int& retval) {
                 case 0b1001: {
                     if (rs2 == reg::zero) {
                         if (rs1_rd == reg::zero) {
-                            return exec_syscall(retval);
+                            return _syscall(retval);
                         } else {
                             /* c.jalr */
                             regfile.write(reg::ra, dec.pc() + 2);
@@ -669,78 +695,8 @@ bool rv64_executor::exec_cr_type(int& retval) {
     return true;
 }
 
-void rv64_executor::exec_addi() {
-    uint64_t rs1 = regfile.read(dec.rs1());
-    uint64_t imm = dec.imm_i();
-
-    uint64_t rd;
-    switch (dec.funct3()) {
-        case 0b000: /* addi */
-            rd = rs1 + imm;
-            break;
-
-        default:
-            throw rv64_illegal_instruction(pc, dec.instr());
-    }
-
-    regfile.write(dec.rd(), rd);
-}
-
-bool rv64_executor::exec_syscall(int& retval) {
-    using enum rv64::reg;
-
-    uint64_t syscall_num;
-    if (dec.is_compressed()) {
-        /* C.EBREAK */
-        throw rv64_illegal_instruction(pc, dec.instr(), "C.EBREAK not implemented");
-    } else {
-        uint64_t imm_i = dec.imm_i();
-        if (dec.rs1() != zero || dec.rs2() != zero || dec.rd() != zero || dec.funct3() != 0 || imm_i > 1) {
-            throw rv64_illegal_instruction(
-                pc, dec.instr(), "invalid ECALL/EBREAK rs1={} rs2={} rd={} funct3={} imm={}",
-                fmt::streamed(dec.rs1()), fmt::streamed(dec.rs2()), fmt::streamed(dec.rd()),
-                dec.funct3(), dec.imm_i());
-        }
-
-        if (imm_i == 0) {
-            /* ECALL */
-            syscall_num = regfile.read(a7);
-        } else {
-            /* EBREAK */
-            throw rv64_illegal_instruction(pc, dec.instr(), "EBREAK not implemented");
-        }
-    }
-
-    switch (static_cast<rv64::syscall>(syscall_num)) {
-        case rv64::syscall::exit:
-        case rv64::syscall::exit_group:
-            /* a0 is exit code */
-            retval = regfile.read(a0);
-            return false;
-
-        default: {
-            std::vector<uint64_t> args {
-                regfile.read(a0),
-                regfile.read(a1),
-                regfile.read(a2),
-                regfile.read(a3),
-                regfile.read(a4),
-                regfile.read(a5)
-            };
-
-            throw invalid_syscall(pc, syscall_num, args);
-        }
-    }
-    
-    return true;
-}
-
 void rv64_executor::next_instr() {
-    if (dec.is_branch()) {
-
-    } else {
-        pc += dec.pc_increment();
-    }
+    pc = _next_pc;
 }
 
 void rv64_executor::init_registers(std::shared_ptr<cpptoml::table> init) {
@@ -754,7 +710,7 @@ void rv64_executor::init_registers(std::shared_ptr<cpptoml::table> init) {
             throw std::runtime_error(fmt::format("invalid initialization value: {}", val->as<std::string>()->get()));
         }
 
-        regfile.write(rv64::parse_reg(key), init->get());
+        _reg.write(arch::rv64::parse_reg(key), init->get());
     }
 }
 
@@ -766,17 +722,17 @@ bool rv64_executor::validate_registers(std::shared_ptr<cpptoml::table> post, std
     bool good = true;
 
     for (const auto& [key, val] : *post) {
-        auto reg = rv64::parse_reg(key);
+        auto reg = arch::rv64::parse_reg(key);
 
         auto expected = val->as<int64_t>();
         if (!expected) {
             throw std::runtime_error(fmt::format("invalid postcondition value: {}", val->as<std::string>()->get()));
         }
 
-        int64_t actual = regfile.read(reg);
+        int64_t actual = _reg.read(reg);
 
         if (actual != expected->get()) {
-            fmt::print(os, "{},{},{}\n", fmt::streamed(reg), expected->get(), actual);
+            fmt::print(os, "{},{},{}\n", reg, expected->get(), actual);
             good = false;
         }
     }
@@ -786,14 +742,16 @@ bool rv64_executor::validate_registers(std::shared_ptr<cpptoml::table> post, std
 
 rv64_executor::rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config)
     : executor(mem, entry, sp)
-    , _config { config }, _verbose { false } {
-    regfile.write(rv64::reg::sp, sp);
+    , _config { config }, _verbose { false }, _fmt { _dec, _reg } {
+    _reg.write(arch::rv64::reg::sp, sp);
 
-    init_registers(_config->get_table_qualified("regfile.init"));
+    if (config) {
+        init_registers(_config->get_table_qualified("regfile.init"));
 
-    _testmode = !!_config->get_table("testing");
-    if (auto val = _config->get_qualified_as<bool>("execution.verbose")) {
-        _verbose = *val;
+        _testmode = !!_config->get_table("testing");
+        if (auto val = _config->get_qualified_as<bool>("execution.verbose")) {
+            _verbose = *val;
+        }
     }
 }
 
@@ -809,7 +767,7 @@ int rv64_executor::run() {
         cycles += 1;
 
         if (_verbose || !_testmode) {
-            std::cerr << dec << '\n';
+            _fmt.instr(std::cerr) << '\n';
         }
     }
 
@@ -825,7 +783,7 @@ int rv64_executor::run() {
 
         if (auto expected = _config->get_qualified_as<int64_t>("testing.retval")) {
             if (*expected != retval) {
-                fmt::print(ss,"exit,{},{}\n", *expected, retval);
+                fmt::print(ss, "exit,{},{}\n", *expected, retval);
                 good = false;
             }
         }
@@ -834,7 +792,7 @@ int rv64_executor::run() {
 
         /* Add header if there's any output */
         if (!good) {
-            fmt::print(std::cerr,"what,expected,actual\n{}", ss.str());
+            fmt::print(std::cerr, "what,expected,actual\n{}", ss.str());
         }
     }
 
@@ -844,7 +802,8 @@ int rv64_executor::run() {
 std::ostream& rv64_executor::print_state(std::ostream& os) const {
     if (!_testmode) {
         fmt::print(os, "RISC-V 64-bit executor, entrypoint = {:#08x}, pc = {:#08x}, sp = {:#08x}\n", entry, pc, sp);
-        os << regfile;
+        _fmt.regs(os);
     }
+
     return os;
 }
