@@ -131,6 +131,10 @@ namespace arch::rv64 {
                     _format_s(os);
                     break;
 
+                case instr_type::J:
+                    _format_j(os);
+                    break;
+
                 default:
                     throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::print::args");
             }

@@ -604,22 +604,6 @@ bool rv64_executor::_syscall(int& retval) {
     return true;
 }
 
-bool rv64_executor::exec_j_type() {
-    uint64_t rd;
-    switch (dec.opcode()) {
-        case rv64::opc::jal:
-            rd = dec.pc() + 4;
-            pc = pc + int64_t(dec.imm_j());
-            break;
-
-        default:
-            throw rv64_illegal_instruction(pc, dec.instr(), "unimplemented J-type instruction");
-    }
-
-    regfile.write(dec.rd(), rd);
-    return true;
-}
-
 bool rv64_executor::exec_ci_type() {
     using namespace rv64;
 

@@ -237,7 +237,6 @@ class rv64_executor : public executor {
 
     bool _syscall(int& retval);
 
-    bool exec_j_type();
     bool exec_ci_type();
     bool exec_css_type();
     bool exec_ciw_type();
