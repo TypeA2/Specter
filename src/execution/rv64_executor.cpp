@@ -751,7 +751,7 @@ bool rv64_executor::validate_registers(std::shared_ptr<cpptoml::table> post, std
 
 rv64_executor::rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config)
     : executor(mem, entry, sp)
-    , _config { config }, _verbose { false }, _fmt { _dec, _reg } {
+    , _config { config }, _fmt { _dec, _reg } {
     _reg.write(arch::rv64::reg::sp, sp);
 
     if (config) {

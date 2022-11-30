@@ -211,8 +211,8 @@ inline std::ostream& operator<<(std::ostream& os, const rv64::regfile& reg) {
 
 class rv64_executor : public executor {
     std::shared_ptr<cpptoml::table> _config;
-    bool _testmode;
-    bool _verbose;
+    bool _testmode{};
+    bool _verbose{};
 
     rv64::decoder dec;
 

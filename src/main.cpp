@@ -20,19 +20,21 @@ struct specter_options {
     fs::path executable;
     std::vector<std::string> argv;
     std::shared_ptr<cpptoml::table> config = nullptr;
+    bool verbose;
 
     [[nodiscard]] static specter_options parse(int argc, char** argv) {
         cxxopts::Options options(argv[0], "Specter: (R|C)ISC Architecture Emulator");
 
         options.add_options()
             ("h,help", "Show help")
+            ("v,verbose", "Enable verbose output", cxxopts::value<bool>()->default_value("false"))
             ("c,config", "Executor's config file (optional)", cxxopts::value<std::string>())
             ("executable", "Input file to run", cxxopts::value<std::string>())
             ("argv", "Executable arguments", cxxopts::value<std::vector<std::string>>());
             ;
 
         options.parse_positional({ "executable", "argv" });
-        options.custom_help("[-c config.toml] <executable> [argv... ]");
+        options.custom_help("[-v] [-c config.toml] <executable> [argv... ]");
         options.positional_help("");
 
         specter_options opts;
@@ -44,6 +46,8 @@ struct specter_options {
                 std::cerr << options.help();
                 std::exit(EXIT_SUCCESS);
             }
+
+            opts.verbose = res["verbose"].as<bool>();
 
             if (res.count("config") > 0) {
                 auto config = res["config"].as<std::string>();
@@ -79,6 +83,23 @@ int main(int argc, char** argv) {
     std::unique_ptr<executor> executor;
     virtual_memory memory(std::endian::native);
     int res = 0;
+
+    /* Constructs or modify config object in case of flags */
+    if (opts.verbose) {
+        /* Make table if nothing was passed */
+        if (!opts.config) {
+            opts.config = cpptoml::make_table();
+        }
+
+        /* Make execution sub-table if it doesn't exist */
+        auto execution = opts.config->get_table("execution");
+        if (!execution) {
+            execution = cpptoml::make_table();
+            opts.config->insert("execution", execution);
+        }
+
+        execution->insert("verbose", true);
+    }
 
     bool testmode = opts.config && !!opts.config->get_table("testing");
     try {
