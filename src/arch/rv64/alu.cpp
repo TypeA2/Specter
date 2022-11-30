@@ -3,9 +3,11 @@
 namespace arch::rv64 {
     void alu::pulse() {
         switch (_op) {
-            case alu_op::invalid: {
+            case alu_op::invalid:
                 throw invalid_alu_op(_a, _b, _op);
-            }
+
+            case alu_op::nop:
+                break;
             
             case alu_op::add: {
                 _res = _a + _b;

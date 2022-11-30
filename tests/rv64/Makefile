@@ -4,7 +4,7 @@ CC := riscv64-linux-gnu-gcc
 CFLAGS := -Wall -Wextra -Wpedantic -std=c17
 CFLAGS_STATIC := -nostdlib -nodefaultlibs -static
 
-TESTS := minimal basic
+TESTS := minimal basic basic_indirect
 TARGETS := $(patsubst %,$(BINDIR)/%.rv64,$(TESTS))
 
 .phony: all clean
@@ -19,3 +19,6 @@ $(BINDIR)/minimal.rv64: minimal.s
 
 $(BINDIR)/basic.rv64: basic.c _exit.s
 	$(CC) $(CFLAGS) $(CFLAGS_STATIC) -march=rv64g -o $@ $^
+
+$(BINDIR)/basic_indirect.rv64: basic.c _exit.s
+	$(CC) $(CFLAGS) $(CFLAGS_STATIC) -march=rv64g -DINDIRECT=1 -o $@ $^

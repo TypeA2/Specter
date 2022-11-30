@@ -42,6 +42,7 @@ foreach(file ${tests_contents})
             #     COMMAND rm -f ${test_binary}
             # )
 
+            set_tests_properties(${test_name}-compile PROPERTIES FIXTURES_REQUIRED ${test_name}-compile)
             set_tests_properties(${test_name}-compile PROPERTIES FIXTURES_SETUP    ${test_name})
             set_tests_properties(${test_name}         PROPERTIES FIXTURES_REQUIRED ${test_name})
             # set_tests_properties(${test_name}-cleanup PROPERTIES FIXTURES_CLEANUP  ${test_name})
@@ -59,8 +60,11 @@ foreach(file ${tests_contents})
             )
 
             if(depends)
-                # Require all this test's dependencies as setup
-                set_tests_properties(${depends} PROPERTIES FIXTURES_SETUP ${test_name})
+                message(STATUS "${test_name} depends on: ${depends}")
+                # Require all this test's dependencies to pass before compiling
+                set_property(TEST ${depends} APPEND PROPERTY FIXTURES_SETUP ${test_name}-compile)
+            else()
+                message(STATUS "${test_name} has no dependencies")
             endif()
         endforeach()
     endif()

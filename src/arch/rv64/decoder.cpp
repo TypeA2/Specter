@@ -43,6 +43,7 @@ namespace arch::rv64 {
                 _decode_j();
                 break;
 
+            case opc::jalr:
             case opc::load:
             case opc::addi:
                 _type = instr_type::I;
@@ -58,6 +59,7 @@ namespace arch::rv64 {
                 _type = instr_type::I;
                 /* ecall only has 1 bit in it's immediate */
                 _imm = (_instr >> 20) & 1;
+                _op = alu_op::nop;
                 break;
             }
 
@@ -82,6 +84,10 @@ namespace arch::rv64 {
 
     static constexpr auto alu_i_op_map() {
         enum_array<std::array<alu_op, 8>, 128, opc> res;
+
+        res.set_for(opc::jalr)
+            (0b000, alu_op::add) /* jalr */
+            ;
 
         res.set_for(opc::load)
             (0b000, alu_op::add) /* lb */

@@ -9,6 +9,7 @@ namespace arch::rv64 {
     std::string_view formatter::_instr_name() const {
         switch (_dec.opcode()) {
             case opc::jal: return "jal";
+            case opc::jalr: return "jalr";
             case opc::load: {
                 switch (_dec.funct()) {
                     case 0b000: return "lb";
@@ -47,13 +48,14 @@ namespace arch::rv64 {
 
     void formatter::_format_i(std::ostream& os) const {
         switch (_dec.opcode()) {
+            case opc::jalr:
             case opc::load: {
                 fmt::print(os, "{}, {}({})", _dec.rd(), int64_t(_dec.imm()), _dec.rs1());
                 break;
             }
 
             default: {
-                fmt::print(os, "{}, {}, {}", _dec.rd(), int64_t(_dec.imm()), _dec.rs1());
+                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), int64_t(_dec.imm()));
             }
         }
     }
@@ -82,7 +84,7 @@ namespace arch::rv64 {
                 auto imm = _dec.imm();
 
                 switch (_dec.funct()) {
-                    case 0b000: {
+                    case 0b000: { /* addi */
                         if (rd == reg::zero && rs1 == reg::zero && imm == 0) {
                             os << "nop";
                             return true;
@@ -90,6 +92,15 @@ namespace arch::rv64 {
                             fmt::print(os, "li {}, {}", rd, int64_t(imm));
                             return true;
                         }
+                        break;
+                    }
+
+                    case 0b011: { /* sltiu */
+                        if (imm == 1) {
+                            fmt::print(os, "seqz {}, {}", rd, rs1);
+                            return true;
+                        }
+                        break;
                     }
                 }
                 break;

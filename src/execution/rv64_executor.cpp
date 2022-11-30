@@ -499,13 +499,19 @@ bool rv64_executor::exec(int& retval) {
 }
 
 bool rv64_executor::_exec_i(int& retval) {
+    _alu.set_a(_reg.read(_dec.rs1()));
+    _alu.set_b(_dec.imm());
+    _alu.set_op(_dec.op());
+    _alu.pulse();
+    
     switch (_dec.opcode()) {
-        case arch::rv64::opc::load: {
-            _alu.set_a(_reg.read(_dec.rs1()));
-            _alu.set_b(_dec.imm());
-            _alu.set_op(_dec.op());
-            _alu.pulse();
+        case arch::rv64::opc::jalr: {
+            _reg.write(_dec.rd(), pc + (_dec.compressed() ? 2 : 4));
+            _next_pc = _alu.result();
+            break;
+        }
 
+        case arch::rv64::opc::load: {
             uintptr_t addr = _alu.result();
 
             uint64_t memory_value;
@@ -526,10 +532,6 @@ bool rv64_executor::_exec_i(int& retval) {
         }
 
         case arch::rv64::opc::addi: {
-            _alu.set_a(_reg.read(_dec.rs1()));
-            _alu.set_b(_dec.imm());
-            _alu.set_op(_dec.op());
-            _alu.pulse();
             _reg.write(_dec.rd(), _alu.result());
             break;
         }

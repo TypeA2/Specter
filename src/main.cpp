@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
         fmt::print(std::cerr, "invalid syscall: {}\n", e.what());
         res = EXIT_FAILURE;
     } catch (arch::illegal_operation& e) {
-        fmt::print(std::cerr, "ilelgal operation: {}\n", e.what());
+        fmt::print(std::cerr, "illegal operation: {}\n", e.what());
         res = EXIT_FAILURE;
     }
 
