@@ -63,7 +63,7 @@ namespace arch::rv64 {
     }
 
     void formatter::_format_j(std::ostream& os) const {
-        fmt::print(os, "jal {}, {:x} <{:+x}>", _dec.rd(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
+        fmt::print(os, "{}, {:x} <{:+x}>", _dec.rd(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
     }
 
     bool formatter::_format_if_pseudo(std::ostream& os) const {
