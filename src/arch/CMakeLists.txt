@@ -5,6 +5,7 @@ add_library(
     "rv64/decoder.hpp" "rv64/decoder.cpp"
     "rv64/formatter.hpp" "rv64/formatter.cpp"
     "rv64/regfile.hpp" "rv64/regfile.cpp"
+    "rv64/alu.hpp" "rv64/alu.cpp"
 )
 
 target_max_warnings(TARGET specter_arch)

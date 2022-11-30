@@ -1,0 +1,45 @@
+[regfile.init]
+a0 = 42
+a7 = 93
+
+s0 = 0x20000
+s1 = 0x20008
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+# 0xef
+t0 = -17
+t1 = 0xef
+
+# 0xbeef
+t2 = -16657
+t3 = 0xbeef
+
+# 0xdeadbeef
+t4 = -559038737
+t5 = 0xdeadbeef
+
+# 0xc0ffee11deadbeef
+t6 = -4539648138848387345
+
+s2 = 0x6d
+s3 = 0x6d
+s4 = 0x126d
+s5 = 0x126d
+s6 = 0x126d126d
+s7 = 0x126d126d
+s8 = 0x126d126d126d126d
+
+s9 = -17
+s10 = 0xef
+
+s11 = -16657
+a1 = 0xbeef
+
+a2 = -559038737
+a3 = 0xdeadbeef
+
+a4 = -4539648138848387345

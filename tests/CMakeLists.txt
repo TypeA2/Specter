@@ -1,8 +1,16 @@
 file(GLOB tests_contents LIST_DIRECTORIES true "${PROJECT_SOURCE_DIR}/tests/*")
 
+include(ProcessorCount)
+ProcessorCount(cpu_count)
+
 foreach(file ${tests_contents})
     # Arch name is directory name
     cmake_path(GET file STEM arch)
+
+    # If there's a makefile add it as a target
+    if(EXISTS "${file}/Makefile")
+        add_custom_target(${arch}-tests ALL COMMAND make -j${cpu_count} -C ${file})
+    endif()
 
     # Isolate plain non-bin directories
     if(NOT (${file} PATH_EQUAL "${PROJECT_SOURCE_DIR}/tests/bin") AND (IS_DIRECTORY ${file}))

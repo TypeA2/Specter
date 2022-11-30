@@ -9,4 +9,6 @@ _start:
     sltiu s0, t6, 42
     sltiu s2, s1, -1234
     sltiu s4, s3, -2047
+    seqz s6, s5
+    seqz s8, s7
     ecall

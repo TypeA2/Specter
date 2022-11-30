@@ -106,6 +106,9 @@ int main(int argc, char** argv) {
     } catch (arch::invalid_syscall& e) {
         fmt::print(std::cerr, "invalid syscall: {}\n", e.what());
         res = EXIT_FAILURE;
+    } catch (arch::illegal_operation& e) {
+        fmt::print(std::cerr, "ilelgal operation: {}\n", e.what());
+        res = EXIT_FAILURE;
     }
 
     auto multiple = [](size_t n) { return (n == 1) ? "" : "s"; };

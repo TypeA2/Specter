@@ -5,6 +5,7 @@
 #include <arch/rv64/rv64.hpp>
 #include <arch/rv64/decoder.hpp>
 #include <arch/rv64/regfile.hpp>
+#include <arch/rv64/alu.hpp>
 #include <arch/rv64/formatter.hpp>
 
 #include <array>
@@ -219,6 +220,7 @@ class rv64_executor : public executor {
 
     arch::rv64::decoder _dec;
     arch::rv64::regfile _reg;
+    arch::rv64::alu _alu;
     arch::rv64::formatter _fmt;
 
     uintptr_t _next_pc;

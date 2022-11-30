@@ -17,5 +17,5 @@ clean:
 $(BINDIR)/minimal.rv64: minimal.s
 	$(CC) $(CFLAGS) $(CFLAGS_STATIC) -o $@ $<
 
-$(BINDIR)/basic.rv64: basic.c
-	$(CC) $(CFLAGS) -nostartfiles -static -o $@ $<
+$(BINDIR)/basic.rv64: basic.c _exit.s
+	$(CC) $(CFLAGS) $(CFLAGS_STATIC) -march=rv64g -o $@ $^

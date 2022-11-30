@@ -8,6 +8,18 @@
 namespace arch::rv64 {
     std::string_view formatter::_instr_name() const {
         switch (_dec.opcode()) {
+            case opc::load: {
+                switch (_dec.funct()) {
+                    case 0b000: return "lb";
+                    case 0b001: return "lh";
+                    case 0b010: return "lw";
+                    case 0b011: return "ld";
+                    case 0b100: return "lbu";
+                    case 0b101: return "lhu";
+                    case 0b110: return "lwu";
+                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::load");
+                }
+            }
             case opc::addi: {
                 switch (_dec.funct()) {
                     case 0b000: return "addi";
@@ -22,7 +34,16 @@ namespace arch::rv64 {
     }
 
     void formatter::_format_i(std::ostream& os) const {
-        fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), int64_t(_dec.imm()));
+        switch (_dec.opcode()) {
+            case opc::load: {
+                fmt::print(os, "{}, {}({})", _dec.rd(), _dec.rs1(), int64_t(_dec.imm()));
+                break;
+            }
+
+            default: {
+                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), int64_t(_dec.imm()));
+            }
+        }
     }
 
     bool formatter::_format_if_pseudo(std::ostream& os) const {

@@ -500,32 +500,37 @@ bool rv64_executor::exec(int& retval) {
 
 bool rv64_executor::_exec_i(int& retval) {
     switch (_dec.opcode()) {
-        case arch::rv64::opc::addi: {
-            uint64_t rs1_val = _reg.read(_dec.rs1());
-            uint64_t imm = _dec.imm();
+        case arch::rv64::opc::load: {
+            _alu.set_a(_reg.read(_dec.rs1()));
+            _alu.set_b(_dec.imm());
+            _alu.set_op(_dec.op());
+            _alu.pulse();
 
-            uint64_t rd_val;
-            switch (_dec.funct()) {
-                case 0b000: { /* addi */
-                    rd_val = rs1_val + imm;
-                    break;
-                }
+            uintptr_t addr = _alu.result();
 
-                case 0b010: { /* slti */
-                    rd_val = (int64_t(rs1_val) < int64_t(imm)) ? 1 : 0;
-                    break;
-                }
-
-                case 0b011: { /* sltiu */
-                    rd_val = (rs1_val < imm) ? 1 : 0;
-                    break;
-                }
-
-                default: throw arch::rv64::illegal_instruction(pc, _dec.instr(), "addi");
+            uint64_t memory_value;
+            switch (_dec.memory_size()) {
+                case 1: memory_value = mem.read_byte(addr); break;
+                case 2: memory_value = mem.read_half(addr); break;
+                case 4: memory_value = mem.read_word(addr); break;
+                case 8: memory_value = mem.read_dword(addr); break;
             }
 
-            _reg.write(_dec.rd(), rd_val);
+            
+            if (!_dec.unsigned_memory()) {
+                memory_value = arch::sign_extend(memory_value, _dec.memory_size() * 8);
+            }
 
+            _reg.write(_dec.rd(), memory_value);
+            break;
+        }
+
+        case arch::rv64::opc::addi: {
+            _alu.set_a(_reg.read(_dec.rs1()));
+            _alu.set_b(_dec.imm());
+            _alu.set_op(_dec.op());
+            _alu.pulse();
+            _reg.write(_dec.rd(), _alu.result());
             break;
         }
 
@@ -805,6 +810,10 @@ int rv64_executor::run() {
         /* Add header if there's any output */
         if (!good) {
             fmt::print(std::cerr, "what,expected,actual\n{}", ss.str());
+        }
+
+        if (_verbose) {
+            _fmt.regs(std::cerr);
         }
     }
 

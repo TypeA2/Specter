@@ -1,5 +1,5 @@
-#include <unistd.h>
+__attribute__ ((noreturn)) extern void _exit();
 
-int _start() {
+__attribute__ ((noreturn)) void _start() {
     _exit(-42);
 }

@@ -58,6 +58,7 @@ namespace arch::rv64 {
 
     enum class opc : uint8_t {
         /* RV64I */
+        load   = 0b0000011,
         addi   = 0b0010011,
         ecall  = 0b1110011,
     };
@@ -65,6 +66,15 @@ namespace arch::rv64 {
     /* https://github.com/bminor/glibc/blob/master/sysdeps/unix/sysv/linux/riscv/rv64/arch-syscall.h */
     enum class syscall : uint64_t {
         exit = 93,
+    };
+
+    enum class alu_op {
+        invalid,
+        
+        add,
+
+        /* less-than, less-than unsigned */
+        lt, ltu,
     };
 
     /* instr & MASK_OPCODE_COMPRESSED == OPC_FULL_SIZE means 32-bit instr, else 16-bit */
@@ -101,8 +111,9 @@ struct fmt_enum : fmt::formatter<std::string_view> {
     }
 };
 
-template <> struct fmt::formatter<arch::rv64::instr_type>      : fmt_enum<arch::rv64::instr_type> { };
+template <> struct fmt::formatter<arch::rv64::instr_type>      : fmt_enum<arch::rv64::instr_type>      { };
 template <> struct fmt::formatter<arch::rv64::compressed_type> : fmt_enum<arch::rv64::compressed_type> { };
-template <> struct fmt::formatter<arch::rv64::reg>             : fmt_enum<arch::rv64::reg>        { };
-template <> struct fmt::formatter<arch::rv64::opc>             : fmt_enum<arch::rv64::opc>        { };
-template <> struct fmt::formatter<arch::rv64::syscall>         : fmt_enum<arch::rv64::syscall>    { };
+template <> struct fmt::formatter<arch::rv64::reg>             : fmt_enum<arch::rv64::reg>             { };
+template <> struct fmt::formatter<arch::rv64::opc>             : fmt_enum<arch::rv64::opc>             { };
+template <> struct fmt::formatter<arch::rv64::syscall>         : fmt_enum<arch::rv64::syscall>         { };
+template <> struct fmt::formatter<arch::rv64::alu_op>          : fmt_enum<arch::rv64::alu_op>          { };
