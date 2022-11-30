@@ -71,9 +71,36 @@ namespace arch::rv64 {
     bool formatter::_format_if_pseudo(std::ostream& os) const {
         switch (_dec.opcode()) {
             case opc::jal: {
+                auto imm = _dec.imm();
                 if (_dec.rd() == reg::zero) {
-                    fmt::print(os, "j {:x} <{:+x}>", _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
+                    fmt::print(os, "j {:x} <{:+x}>", _dec.pc() + int64_t(imm), int64_t(imm));
                     return true;
+                } else if (_dec.rd() == reg::ra) {
+                    fmt::print(os, "jal {:x} <{:+x}>",  _dec.pc() + int64_t(imm), int64_t(imm));
+                    return true;
+                }
+                break;
+            }
+
+            case opc::jalr: {
+                auto rd = _dec.rd();
+                auto rs1 = _dec.rs1();
+                if (_dec.imm() == 0) {
+                    switch (rd) {
+                        case reg::zero:
+                            if (rs1 == reg::ra) {
+                                os << "ret";
+                            } else {
+                                fmt::print(os, "jr {}", rs1);
+                            }
+                            return true;
+
+                        case reg::ra:
+                            fmt::print(os, "jalr {}", rs1);
+                            return true;
+
+                        default: break;
+                    }
                 }
                 break;
             }

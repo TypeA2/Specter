@@ -20,4 +20,7 @@ next:
     ecall       # not executed
 bar:
     li t3, 128  # executed
+    jalr s4, 4(s5)
+end:
+    li t4, 128  # not executed
     ecall       # executed
