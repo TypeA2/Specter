@@ -38,6 +38,11 @@ namespace arch::rv64 {
         _opcode = static_cast<opc>(_instr & 0x7f);
 
         switch (_opcode) {
+            case opc::jal:
+                _type = instr_type::J;
+                _decode_j();
+                break;
+
             case opc::load:
             case opc::addi:
                 _type = instr_type::I;
@@ -116,6 +121,24 @@ namespace arch::rv64 {
 
         /* S-type is only for stores, thus always add */
         _op = alu_op::add;
+    }
+
+    void decoder::_decode_j() {
+        _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
+
+        /* imm[19:12], already in the correct position */
+        uint32_t imm = _instr & 0xFF000;
+
+        /* imm[11]*/
+        imm |= (_instr >> 9) & (0b1 << 11);
+
+        /* imm[10:1] */
+        imm |= (_instr >> 20) & (0b11111111110);
+
+        /* imm[20] */
+        imm |= (_instr >> 11) & (0b1 << 20);
+
+        _imm = sign_extend<20>(imm);
     }
 
     void decoder::_decode_compressed() {

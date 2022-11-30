@@ -485,7 +485,7 @@ bool rv64_executor::exec(int& retval) {
             break;
 
         case arch::rv64::instr_type::J:
-            break;
+            return _exec_j();
     }
 
     try {
@@ -570,6 +570,12 @@ bool rv64_executor::_exec_s() {
         default: throw arch::rv64::illegal_instruction(pc, _dec.instr(), "s-type");
     }
 
+    return true;
+}
+
+bool rv64_executor::_exec_j() {
+    _reg.write(_dec.rd(), pc + (_dec.compressed() ? 2 : 4));
+    _next_pc = pc + _dec.imm();
     return true;
 }
 

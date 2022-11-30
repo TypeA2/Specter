@@ -58,6 +58,7 @@ namespace arch::rv64 {
 
     enum class opc : uint8_t {
         /* RV64I */
+        jal    = 0b1101111,
         load   = 0b0000011,
         addi   = 0b0010011,
         store  = 0b0100011,
