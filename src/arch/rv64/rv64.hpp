@@ -60,6 +60,7 @@ namespace arch::rv64 {
         /* RV64I */
         load   = 0b0000011,
         addi   = 0b0010011,
+        store  = 0b0100011,
         ecall  = 0b1110011,
     };
 

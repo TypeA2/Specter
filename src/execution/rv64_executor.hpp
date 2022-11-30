@@ -232,10 +232,10 @@ class rv64_executor : public executor {
     [[nodiscard]] bool exec(int& retval);
 
     bool _exec_i(int& retval);
+    bool _exec_s();
 
     bool _syscall(int& retval);
 
-    bool exec_s_type();
     bool exec_j_type();
     bool exec_ci_type();
     bool exec_css_type();

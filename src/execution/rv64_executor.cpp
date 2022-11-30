@@ -476,7 +476,7 @@ bool rv64_executor::exec(int& retval) {
             return _exec_i(retval);
 
         case arch::rv64::instr_type::S:
-            break;
+            return _exec_s();
 
         case arch::rv64::instr_type::B:
             break;
@@ -495,7 +495,7 @@ bool rv64_executor::exec(int& retval) {
         fmt::print(std::cerr, "error on unknown instruction\n");
     }
 
-    throw rv64_illegal_instruction(pc, dec.instr());
+    throw arch::rv64::illegal_instruction(pc, dec.instr(), "unknown type");
 }
 
 bool rv64_executor::_exec_i(int& retval) {
@@ -548,6 +548,31 @@ bool rv64_executor::_exec_i(int& retval) {
     return true;
 }
 
+bool rv64_executor::_exec_s() {
+    switch (_dec.opcode()) {
+        case arch::rv64::opc::store: {
+            _alu.set_a(_reg.read(_dec.rs1()));
+            _alu.set_b(_dec.imm());
+            _alu.set_op(_dec.op());
+            _alu.pulse();
+
+            uintptr_t addr = _alu.result();
+
+            switch (_dec.memory_size()) {
+                case 1: mem.write_byte(addr, _reg.read(_dec.rs2())); break;
+                case 2: mem.write_half(addr, _reg.read(_dec.rs2())); break;
+                case 4: mem.write_word(addr, _reg.read(_dec.rs2())); break;
+                case 8: mem.write_dword(addr, _reg.read(_dec.rs2())); break;
+            }
+            break;
+        }
+
+        default: throw arch::rv64::illegal_instruction(pc, _dec.instr(), "s-type");
+    }
+
+    return true;
+}
+
 bool rv64_executor::_syscall(int& retval) {
     uint64_t id = _reg.read(arch::rv64::reg::a7);
 
@@ -568,31 +593,6 @@ bool rv64_executor::_syscall(int& retval) {
 
             throw invalid_syscall(pc, id, args);
         }
-    }
-
-    return true;
-}
-
-bool rv64_executor::exec_s_type() {
-    uint64_t src = regfile.read(dec.rs2());
-    uint64_t addr = regfile.read(dec.rs1()) + static_cast<int64_t>(dec.imm_i());
-
-    switch (dec.funct3()) {
-        case 0b000:
-            mem.write_byte(addr, src);
-            break;
-
-        case 0b001:
-            mem.write_half(addr, src);
-            break;
-
-        case 0b010:
-            mem.write_word(addr, src);
-            break;
-
-        case 0b011:
-            mem.write_dword(addr, src);
-            break;
     }
 
     return true;

@@ -20,12 +20,23 @@ namespace arch::rv64 {
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::load");
                 }
             }
+
             case opc::addi: {
                 switch (_dec.funct()) {
                     case 0b000: return "addi";
                     case 0b010: return "slti";
                     case 0b011: return "sltiu";
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addi");
+                }
+            }
+
+            case opc::store: {
+                switch (_dec.funct()) {
+                    case 0b000: return "sb";
+                    case 0b001: return "sh";
+                    case 0b010: return "sw";
+                    case 0b011: return "sd";
+                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::store");
                 }
             }
 
@@ -36,14 +47,18 @@ namespace arch::rv64 {
     void formatter::_format_i(std::ostream& os) const {
         switch (_dec.opcode()) {
             case opc::load: {
-                fmt::print(os, "{}, {}({})", _dec.rd(), _dec.rs1(), int64_t(_dec.imm()));
+                fmt::print(os, "{}, {}({})", _dec.rd(), int64_t(_dec.imm()), _dec.rs1());
                 break;
             }
 
             default: {
-                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), int64_t(_dec.imm()));
+                fmt::print(os, "{}, {}, {}", _dec.rd(), int64_t(_dec.imm()), _dec.rs1());
             }
         }
+    }
+    
+    void formatter::_format_s(std::ostream& os) const {
+        fmt::print(os, "{}, {}({})", _dec.rs2(), int64_t(_dec.imm()), _dec.rs1());
     }
 
     bool formatter::_format_if_pseudo(std::ostream& os) const {
@@ -97,6 +112,10 @@ namespace arch::rv64 {
             switch (_dec.type()) {
                 case instr_type::I:
                     _format_i(os);
+                    break;
+
+                case instr_type::S:
+                    _format_s(os);
                     break;
 
                 default:

@@ -44,6 +44,11 @@ namespace arch::rv64 {
                 _decode_i();
                 break;
 
+            case opc::store:
+                _type = instr_type::S;
+                _decode_s();
+                break;
+
             case opc::ecall: {
                 _type = instr_type::I;
                 /* ecall only has 1 bit in it's immediate */
@@ -59,6 +64,7 @@ namespace arch::rv64 {
         // TODO maybe rework to only switch on _opcode once? 
         switch (_opcode) {
             case opc::load:
+            case opc::store:
                 _is_memory = true;
                 _unsigned_memory = (_funct & 0b100) ? true : false;
                 _memory_size = 1 << (_funct & 0b11);
@@ -100,6 +106,16 @@ namespace arch::rv64 {
         static constinit auto alu_op_map = alu_i_op_map();
 
         _op = alu_op_map[_opcode][_funct];
+    }
+
+    void decoder::_decode_s() {
+        _rs1 = static_cast<reg>((_instr >> 15) & REG_MASK);
+        _rs2 = static_cast<reg>((_instr >> 20) & REG_MASK);
+        _funct = (_instr >> 12) & 0b111;
+        _imm = sign_extend<12>(((_instr >> 20) & 0b111111100000) | ((_instr >> 7) & 0b11111));
+
+        /* S-type is only for stores, thus always add */
+        _op = alu_op::add;
     }
 
     void decoder::_decode_compressed() {

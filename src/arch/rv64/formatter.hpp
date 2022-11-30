@@ -15,6 +15,7 @@ namespace arch::rv64 {
         void _format_args(std::ostream& os) const;
 
         void _format_i(std::ostream& os) const;
+        void _format_s(std::ostream& os) const;
 
         [[nodiscard]] bool _format_if_pseudo(std::ostream& os) const;
 
