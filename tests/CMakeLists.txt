@@ -32,7 +32,7 @@ foreach(file ${tests_contents})
             # Actually run it..
             add_test(
                 NAME ${test_name}
-                COMMAND $<TARGET_FILE:specter> "-c" ${test_config} ${test_binary}
+                COMMAND $<TARGET_FILE:specter> "-c" ${test_config}
             )
 
             # And to remove the binary

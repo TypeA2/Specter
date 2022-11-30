@@ -49,24 +49,53 @@ struct specter_options {
 
             opts.verbose = res["verbose"].as<bool>();
 
+            /* Parsed as follows:
+             * if executable given in config file, use that as the executable's actual path
+             * if no argv on command line but executable given in config file, use executable as argv[0]
+             */
+
+            fs::path executable;
             if (res.count("config") > 0) {
                 auto config = res["config"].as<std::string>();
+                fs::path config_dir = fs::path(config).parent_path();
 
-                if (config == "-") {
-                    opts.config = cpptoml::parser(std::cin).parse();
-                } else {
-                    opts.config = cpptoml::parse_file(config);
+                opts.config = cpptoml::parse_file(config);
+
+                /* Executable from config if given, else try from argv */
+                if (auto exec = opts.config->get_qualified_as<std::string>("execution.executable")) {
+                    executable = *exec;
+
+                    if (executable.is_absolute()) {
+                        opts.executable = fs::canonical(executable);
+                    } else {
+                        /* Relative to config file */
+                        opts.executable = fs::canonical(config_dir / executable);
+                    }
                 }
             }
 
-            auto argv0 = res["executable"].as<std::string>();
-            opts.executable = fs::canonical(argv0);
-            opts.argv.emplace_back(std::move(argv0));
+            try {
+                auto argv0 = res["executable"].as<std::string>();
+
+                /* If an executable was specified in the config file, only use this as argv, else use as both */
+                if (opts.executable.empty()) {
+                    opts.executable = fs::canonical(argv0);
+                }
+                
+                opts.argv.emplace_back(std::move(argv0));
+            } catch (const cxxopts::OptionException& e) {
+                /* No executable on command line, use config if given else error */
+                if (!opts.executable.empty()) {
+                    /* Use non-canonical executable as argv*/
+                    opts.argv.push_back(executable);
+                } else {
+                    throw;
+                }
+            }
 
             if (res.count("argv") > 0) {
                 std::ranges::copy(res["argv"].as<std::vector<std::string>>(), std::back_inserter(opts.argv));
             }
-
         } catch (const std::exception& e) {
             std::cerr << e.what() << "\n\n"
                 << options.help();
