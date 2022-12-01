@@ -29,6 +29,7 @@ namespace arch::rv64 {
         void _decode_s();
         void _decode_j();
         void _decode_r();
+        void _decode_u();
 
         void _decode_compressed();
 

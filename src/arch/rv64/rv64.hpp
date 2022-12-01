@@ -58,6 +58,8 @@ namespace arch::rv64 {
 
     enum class opc : uint8_t {
         /* RV64I */
+        lui    = 0b0110111,
+        auipc  = 0b0010111,
         jal    = 0b1101111,
         jalr   = 0b1100111,
         load   = 0b0000011,
@@ -78,6 +80,9 @@ namespace arch::rv64 {
 
         nop,
         
+        /* Use ALU as a muxer */
+        forward_a, forward_b,
+
         add,
 
         addw, subw,

@@ -11,7 +11,7 @@
 namespace arch {
     template <size_t from, std::unsigned_integral T = uint64_t, std::unsigned_integral U = uint64_t>
     [[nodiscard]] inline constexpr U sign_extend(T val) {
-        if constexpr (from == std::numeric_limits<T>::digits) {
+        if constexpr (from == std::numeric_limits<U>::digits) {
             /* No-op */
             return val;
         }
@@ -27,7 +27,7 @@ namespace arch {
 
     template <std::unsigned_integral T = uint64_t, std::unsigned_integral U = uint64_t>
     [[nodiscard]] inline constexpr U sign_extend(T val, uint8_t source_bits) {
-        if (source_bits == std::numeric_limits<T>::digits) {
+        if (source_bits == std::numeric_limits<U>::digits) {
             return val;
         }
         

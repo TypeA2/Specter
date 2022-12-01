@@ -1,0 +1,19 @@
+[execution]
+executable = "auipc.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+s0 = 0xfaf
+s1 = 0xfaf
+s2 = 0xfaf
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = 0x000bb000
+s1 = 0x12355004
+s2 = -88223736

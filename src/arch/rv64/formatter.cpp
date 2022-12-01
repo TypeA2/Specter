@@ -8,6 +8,8 @@
 namespace arch::rv64 {
     std::string_view formatter::_instr_name() const {
         switch (_dec.opcode()) {
+            case opc::lui: return "lui";
+            case opc::auipc: return "auipc";
             case opc::jal: return "jal";
             case opc::jalr: return "jalr";
             case opc::load: {
@@ -85,6 +87,10 @@ namespace arch::rv64 {
 
     void formatter::_format_r(std::ostream& os) const {
         fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.rs2());
+    }
+
+    void formatter::_format_u(std::ostream& os) const {
+        fmt::print(os, "{}, {:#x}", _dec.rd(), _dec.imm());
     }
 
     bool formatter::_format_if_pseudo(std::ostream& os) const {
@@ -210,6 +216,10 @@ namespace arch::rv64 {
 
                 case instr_type::R:
                     _format_r(os);
+                    break;
+
+                case instr_type::U:
+                    _format_u(os);
                     break;
 
                 default:

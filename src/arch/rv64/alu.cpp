@@ -8,31 +8,34 @@ namespace arch::rv64 {
 
             case alu_op::nop:
                 break;
+
+            case alu_op::forward_a:
+                _res = _a;
+                break;
+
+            case alu_op::forward_b:
+                _res = _b;
+                break;
             
-            case alu_op::add: {
+            case alu_op::add:
                 _res = _a + _b;
                 break;
-            }
 
-            case alu_op::addw: {
+            case alu_op::addw:
                 _res = sign_extend((_a + _b) & 0xffffffff, 32);
                 break;
-            }
 
-            case alu_op::subw: {
+            case alu_op::subw:
                 _res = sign_extend(uint64_t(int64_t(_a) - int64_t(_b)) & 0xffffffff, 32);
                 break;
-            }
 
-            case alu_op::lt: {
+            case alu_op::lt:
                 _res = (int64_t(_a) < int64_t(_b)) ? 1 : 0;
                 break;
-            }
 
-            case alu_op::ltu: {
+            case alu_op::ltu:
                 _res = (_a < _b) ? 1 : 0;
                 break;
-            }
         }
     }
 }

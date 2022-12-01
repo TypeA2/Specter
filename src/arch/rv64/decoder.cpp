@@ -1,10 +1,18 @@
 #include "decoder.hpp"
 
+#include <iostream>
+
 namespace arch::rv64 {
     void decoder::_decode_full() {
         _opcode = static_cast<opc>(_instr & 0x7f);
 
         switch (_opcode) {
+            case opc::lui:
+            case opc::auipc:
+                _type = instr_type::U;
+                _decode_u();
+                break;
+
             case opc::jal:
                 _type = instr_type::J;
                 _decode_j();
@@ -151,6 +159,18 @@ namespace arch::rv64 {
                 break;
             }
 
+            default: throw illegal_instruction(_pc, _instr, "r-type");
+        }
+    }
+
+    void decoder::_decode_u() {
+        _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
+        _imm = sign_extend<32>(_instr & 0xfffff000);
+
+        _op = alu_op::invalid;
+        switch (_opcode) {
+            case opc::lui:   _op = alu_op::forward_a; break;
+            case opc::auipc: _op = alu_op::add; break;
             default: throw illegal_instruction(_pc, _instr, "r-type");
         }
     }
