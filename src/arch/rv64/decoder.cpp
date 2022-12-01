@@ -13,6 +13,7 @@ namespace arch::rv64 {
             case opc::jalr:
             case opc::load:
             case opc::addi:
+            case opc::addiw:
                 _type = instr_type::I;
                 _decode_i();
                 break;
@@ -91,6 +92,13 @@ namespace arch::rv64 {
                     case 0b000: _op = alu_op::add; break; /* addi */
                     case 0b010: _op = alu_op::lt;  break; /* slti */
                     case 0b011: _op = alu_op::ltu; break; /* sltiu */
+                }
+                break;
+            }
+
+            case opc::addiw: {
+                switch (_funct) {
+                    case 0b000: _op = alu_op::addw; break; /* addiw */
                 }
                 break;
             }

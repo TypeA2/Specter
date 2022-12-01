@@ -42,6 +42,13 @@ namespace arch::rv64 {
                 }
             }
 
+            case opc::addiw: {
+                switch (_dec.funct()) {
+                    case 0b000: return "addiw";
+                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addiw");
+                }
+            }
+
             case opc::addw: {
                 switch (_dec.funct()) {
                     case 0b0000000000: return "addw";
@@ -151,6 +158,14 @@ namespace arch::rv64 {
                     case 1: os << "ebreak"; break;
                 }
                 return true;
+            }
+
+            case opc::addiw: {
+                if (_dec.funct() == 0 && _dec.imm() == 0) {
+                    fmt::print(os, "sext.w {}, {}", _dec.rd(), _dec.rs1());
+                    return true;
+                }
+                break;
             }
 
             case opc::addw: {

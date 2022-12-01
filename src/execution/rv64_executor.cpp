@@ -531,7 +531,8 @@ bool rv64_executor::_exec_i(int& retval) {
             break;
         }
 
-        case arch::rv64::opc::addi: {
+        case arch::rv64::opc::addi:
+        case arch::rv64::opc::addiw: {
             _reg.write(_dec.rd(), _alu.result());
             break;
         }

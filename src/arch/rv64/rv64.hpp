@@ -22,7 +22,7 @@ namespace arch::rv64 {
         template <typename... Args>
         illegal_instruction(uintptr_t addr, uint32_t instr, fmt::format_string<Args...> fmt, Args&&... args)
             : illegal_instruction(
-                addr, fmt::format("{:08x} {}", instr, fmt::format(fmt, std::forward<Args>(args)...))) { }
+                addr, instr, fmt::format(fmt, std::forward<Args>(args)...)) { }
     };
 
     class illegal_compressed_instruction : public arch::illegal_instruction {
@@ -36,7 +36,7 @@ namespace arch::rv64 {
         template <typename... Args>
         illegal_compressed_instruction(uintptr_t addr, uint16_t instr, fmt::format_string<Args...> fmt, Args&&... args)
             : illegal_instruction(
-                addr, fmt::format("{:04x} {}", instr, fmt::format(fmt, std::forward<Args>(args)...))) { }
+                addr, instr, fmt::format(fmt, std::forward<Args>(args)...)) { }
     };
 
     enum class instr_type {
@@ -64,6 +64,7 @@ namespace arch::rv64 {
         addi   = 0b0010011,
         store  = 0b0100011,
         ecall  = 0b1110011,
+        addiw  = 0b0011011,
         addw   = 0b0111011,
     };
 
