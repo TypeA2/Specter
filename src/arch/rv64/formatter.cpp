@@ -155,7 +155,7 @@ namespace arch::rv64 {
 
             case opc::addw: {
                 if (_dec.funct() == 0b0100000000 && _dec.rs1() == reg::zero) {
-                    fmt::print(os, "negz {}, {}", _dec.rd(), _dec.rs2());
+                    fmt::print(os, "negw {}, {}", _dec.rd(), _dec.rs2());
                     return true;
                 }
                 break;
