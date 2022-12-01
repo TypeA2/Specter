@@ -64,6 +64,7 @@ namespace arch::rv64 {
         addi   = 0b0010011,
         store  = 0b0100011,
         ecall  = 0b1110011,
+        addw   = 0b0111011,
     };
 
     /* https://github.com/bminor/glibc/blob/master/sysdeps/unix/sysv/linux/riscv/rv64/arch-syscall.h */
@@ -77,6 +78,8 @@ namespace arch::rv64 {
         nop,
         
         add,
+
+        addw, subw,
 
         /* less-than, less-than unsigned */
         lt, ltu,

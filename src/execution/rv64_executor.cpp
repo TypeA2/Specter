@@ -470,7 +470,7 @@ void rv64_executor::fetch() {
 bool rv64_executor::exec(int& retval) {
     switch (_dec.type()) {
         case arch::rv64::instr_type::R:
-            break;
+            return _exec_r();
 
         case arch::rv64::instr_type::I:
             return _exec_i(retval);
@@ -578,6 +578,15 @@ bool rv64_executor::_exec_s() {
 bool rv64_executor::_exec_j() {
     _reg.write(_dec.rd(), pc + (_dec.compressed() ? 2 : 4));
     _next_pc = pc + _dec.imm();
+    return true;
+}
+
+bool rv64_executor::_exec_r() {
+    _alu.set_a(_reg.read(_dec.rs1()));
+    _alu.set_b(_reg.read(_dec.rs2()));
+    _alu.set_op(_dec.op());
+    _alu.pulse();
+    _reg.write(_dec.rd(), _alu.result());
     return true;
 }
 

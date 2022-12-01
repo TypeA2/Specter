@@ -42,6 +42,14 @@ namespace arch::rv64 {
                 }
             }
 
+            case opc::addw: {
+                switch (_dec.funct()) {
+                    case 0b0000000000: return "addw";
+                    case 0b0100000000: return "subw";
+                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addw");
+                }
+            }
+
             default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::opcode");
         }
     }
@@ -66,6 +74,10 @@ namespace arch::rv64 {
 
     void formatter::_format_j(std::ostream& os) const {
         fmt::print(os, "{}, {:x} <{:+x}>", _dec.rd(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
+    }
+
+    void formatter::_format_r(std::ostream& os) const {
+        fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.rs2());
     }
 
     bool formatter::_format_if_pseudo(std::ostream& os) const {
@@ -141,6 +153,14 @@ namespace arch::rv64 {
                 return true;
             }
 
+            case opc::addw: {
+                if (_dec.funct() == 0b0100000000 && _dec.rs1() == reg::zero) {
+                    fmt::print(os, "negz {}, {}", _dec.rd(), _dec.rs2());
+                    return true;
+                }
+                break;
+            }
+
             default:
                 break;
         }
@@ -171,6 +191,10 @@ namespace arch::rv64 {
 
                 case instr_type::J:
                     _format_j(os);
+                    break;
+
+                case instr_type::R:
+                    _format_r(os);
                     break;
 
                 default:

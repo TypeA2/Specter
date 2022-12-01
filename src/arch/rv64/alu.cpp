@@ -14,6 +14,16 @@ namespace arch::rv64 {
                 break;
             }
 
+            case alu_op::addw: {
+                _res = sign_extend((_a + _b) & 0xffffffff, 32);
+                break;
+            }
+
+            case alu_op::subw: {
+                _res = sign_extend(uint64_t(int64_t(_a) - int64_t(_b)) & 0xffffffff, 32);
+                break;
+            }
+
             case alu_op::lt: {
                 _res = (int64_t(_a) < int64_t(_b)) ? 1 : 0;
                 break;
