@@ -71,6 +71,7 @@ namespace arch::rv64 {
         addw   = 0b0111011,
 
         /* RVC Q2 */
+        c_ldsp = 0b0001110,
         c_jr   = 0b0010010,
     };
 

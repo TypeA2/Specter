@@ -32,7 +32,7 @@ namespace arch::rv64 {
         void _decode_u();
 
         /* Compressed instructions decode to full instructions */
-        void _decode_cr();
+        void _decode_c_jr();
 
         public:
         void set_instr(uintptr_t pc, uint32_t instr);

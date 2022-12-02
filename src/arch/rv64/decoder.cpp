@@ -52,8 +52,24 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_ldsp: {
+                _type = instr_type::I;
+                _opcode = opc::load;
+                _rs1 = reg::sp;
+                _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
+                _funct = 0b011;
+                _op = alu_op::add;
+
+                uint32_t imm = (_instr >> 2) & 0b11000;
+                imm |= (_instr >> 7) & 0b100000;
+                imm |= (_instr << 4) & 0b111000000;
+
+                _imm = imm;
+                break;
+            }
+
             case opc::c_jr: {
-                _decode_cr();
+                _decode_c_jr();
                 break;
             }
 
@@ -200,7 +216,7 @@ namespace arch::rv64 {
         }
     }
 
-    void decoder::_decode_cr() {
+    void decoder::_decode_c_jr() {
         if ((_instr >> 12) & 0b1) {
             /* c.ebreak, c.jalr or c.add */
             throw illegal_compressed_instruction(_pc, _instr, "c.ebreak/c.jalr/c.add");

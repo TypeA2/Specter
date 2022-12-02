@@ -570,7 +570,7 @@ bool rv64_executor::_exec_s() {
             break;
         }
 
-        default: throw arch::rv64::illegal_instruction(pc, _dec.instr(), "s-type");
+        default: throw arch::rv64::illegal_instruction(pc, _dec.instr(), "exec::s-type");
     }
 
     return true;
