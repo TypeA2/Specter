@@ -1,0 +1,22 @@
+[execution]
+executable = "c.mv.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+t0 = 0x123456789abcdef0
+t1 = -42
+t2 = 0x7a7a7a7a7a7a7a7a
+
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+ra = 0
+
+s0 = 0x123456789abcdef0
+s1 = -42
+s2 = 0x7a7a7a7a7a7a7a7a

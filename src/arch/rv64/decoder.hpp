@@ -24,14 +24,15 @@ namespace arch::rv64 {
         uint64_t _memory_size{};
         bool _unsigned_memory{};
 
-        void _decode_full();
+        void _decode();
         void _decode_i();
         void _decode_s();
         void _decode_j();
         void _decode_r();
         void _decode_u();
 
-        void _decode_compressed();
+        /* Compressed instructions decode to full instructions */
+        void _decode_cr();
 
         public:
         void set_instr(uintptr_t pc, uint32_t instr);

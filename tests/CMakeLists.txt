@@ -18,8 +18,8 @@ foreach(file ${tests_contents})
         file(GLOB microtests LIST_DIRECTORIES false "${file}/micro/*.toml")
         foreach(test_config ${microtests})
             # Binaries have the same stem
-            cmake_path(GET test_config STEM test)
-            cmake_path(REPLACE_EXTENSION test_config ${arch} OUTPUT_VARIABLE test_binary)
+            cmake_path(GET test_config STEM LAST_ONLY test)
+            cmake_path(REPLACE_EXTENSION test_config LAST_ONLY ${arch} OUTPUT_VARIABLE test_binary)
 
             set(test_name ${arch}-micro-${test})
 
@@ -49,7 +49,7 @@ foreach(file ${tests_contents})
         endforeach()
 
         foreach(test_config ${microtests})
-            cmake_path(GET test_config STEM test)
+            cmake_path(GET test_config STEM LAST_ONLY test)
             set(test_name ${arch}-micro-${test})
 
             # Retrieve dependencies from dedicated python script

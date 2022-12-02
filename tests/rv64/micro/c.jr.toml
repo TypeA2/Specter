@@ -1,0 +1,22 @@
+[execution]
+executable = "c.jr.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+ra = 0
+t0 = 0x10000
+t1 = 0x1001c
+
+
+[testing]
+retval = 42
+depends = [ "ecall", "addi" ]
+
+[testing.regfile.post]
+ra = 0
+
+s0 = 127
+s1 = 128
+s2 = 129

@@ -68,6 +68,9 @@ namespace arch::rv64 {
         ecall  = 0b1110011,
         addiw  = 0b0011011,
         addw   = 0b0111011,
+
+        /* RVC Q2 */
+        c_jr   = 0b0010010,
     };
 
     /* https://github.com/bminor/glibc/blob/master/sysdeps/unix/sysv/linux/riscv/rv64/arch-syscall.h */

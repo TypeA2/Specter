@@ -1,10 +1,16 @@
 #include "decoder.hpp"
 
 #include <iostream>
+#include <bitset>
 
 namespace arch::rv64 {
-    void decoder::_decode_full() {
-        _opcode = static_cast<opc>(_instr & 0x7f);
+    void decoder::_decode() {
+        if (_compressed) {
+            /* Compressed instructions have an opcode consisting of the lower 2 and upper 3 bits */
+            _opcode = static_cast<opc>(((_instr >> 11) & 0b11100) | (_instr & 0b11));
+        } else {
+            _opcode = static_cast<opc>(_instr & 0x7f);
+        }
 
         switch (_opcode) {
             case opc::lui:
@@ -45,8 +51,17 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_jr: {
+                _decode_cr();
+                break;
+            }
+
             default:
-                throw illegal_instruction(_pc, _instr, "decode");
+                if (_compressed) {
+                    throw illegal_compressed_instruction(_pc, _instr, "decode compressed");
+                } else {
+                    throw illegal_instruction(_pc, _instr, "decode");
+                }
         }
 
         /* These depend on values from the previously executed decode (for the most part) */
@@ -175,8 +190,27 @@ namespace arch::rv64 {
         }
     }
 
-    void decoder::_decode_compressed() {
-        throw illegal_compressed_instruction(_pc, _instr, "decode compressed");
+    void decoder::_decode_cr() {
+        if ((_instr >> 12) & 0b1) {
+            /* c.ebreak, c.jalr or c.add */
+            throw illegal_compressed_instruction(_pc, _instr, "c.ebreak/c.jalr/c.add");
+        } else {
+            /* c.jr or c.mv */
+            if (auto rs2 = static_cast<reg>((_instr >> 2) & REG_MASK); rs2 != reg::zero) {
+                _rs2 = rs2;
+                /* c.mv */
+                throw illegal_compressed_instruction(_pc, _instr, "c.mv");
+            } else {
+                /* c.jr */
+                _opcode = opc::jalr;
+                _rs1 = static_cast<reg>((_instr >> 7) & REG_MASK);
+                _rd = reg::zero;
+                _funct = 0b000;
+                _op = alu_op::add;
+                _imm = 0;
+                _type = instr_type::I;
+            }
+        }
     }
 
     void decoder::set_instr(uintptr_t pc, uint32_t instr) {
@@ -184,10 +218,6 @@ namespace arch::rv64 {
         _pc = pc;
         _compressed = !((_instr & 0b11) == OPC_FULL_SIZE);
         
-        if (_compressed) {
-            _decode_compressed();
-        } else {
-            _decode_full();
-        }
+        _decode();
     }
 }

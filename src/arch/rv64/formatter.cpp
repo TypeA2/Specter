@@ -191,7 +191,38 @@ namespace arch::rv64 {
 
     std::ostream& formatter::instr(std::ostream& os) const {
         if (_dec.compressed()) {
-            throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed");
+            /* Another option would be reverse engineering the original instruction from the translated
+             * instruction, which would probably be even worse than re-decoding like this
+             */
+            uint16_t instr = _dec.instr();
+            fmt::print(os, "{:x}:  {:04x}       ", _dec.pc(), instr);
+            switch (static_cast<opc>(((instr >> 11) & 0b11100) | (instr & 0b11))) {
+                case opc::c_jr: {
+                    auto r0 = static_cast<reg>((instr >> 2) & REG_MASK);
+                    auto r1 = static_cast<reg>((instr >> 7) & REG_MASK);
+                    if ((instr >> 12) & 0b1) {
+                        if (r0 == reg::zero) {
+                            if (r1 == reg::zero) {
+                                os << "c.ebreak";
+                            } else {
+                                fmt::print(os, "c.jalr {}", r1);
+                            }
+                        } else {
+                            fmt::print(os, "c.add {}, {}", r1, r0);
+                        }
+                    } else {
+                        if (r0 == reg::zero) {
+                            fmt::print(os, "c.jr {}", r1);
+                        } else {
+                            fmt::print(os, "c.mv {}, {}", r1, r0);
+                        }
+                    }
+                    break;
+                }
+
+                default:
+                    throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed");
+            }
         } else {
             fmt::print(os, "{:x}:  {:08x}   ", _dec.pc(), _dec.instr());
 
