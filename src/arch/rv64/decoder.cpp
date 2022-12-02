@@ -45,6 +45,7 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::add:
             case opc::addw: {
                 _type = instr_type::R;
                 _decode_r();
@@ -166,10 +167,19 @@ namespace arch::rv64 {
 
         _op = alu_op::invalid;
         switch (_opcode) {
+            case opc::add: {
+                switch (_funct) {
+                    case 0b0000000000: _op = alu_op::add; break; /* add */
+                    default: throw illegal_instruction(_pc, _instr, "add");
+                }
+                break;
+            }
+
             case opc::addw: {
                 switch (_funct) {
                     case 0b0000000000: _op = alu_op::addw; break; /* addw */
                     case 0b0100000000: _op = alu_op::subw; break; /* subw */
+                    default: throw illegal_instruction(_pc, _instr, "addw");
                 }
                 break;
             }
@@ -195,18 +205,24 @@ namespace arch::rv64 {
             /* c.ebreak, c.jalr or c.add */
             throw illegal_compressed_instruction(_pc, _instr, "c.ebreak/c.jalr/c.add");
         } else {
+            _op = alu_op::add;
+
             /* c.jr or c.mv */
             if (auto rs2 = static_cast<reg>((_instr >> 2) & REG_MASK); rs2 != reg::zero) {
-                _rs2 = rs2;
                 /* c.mv */
-                throw illegal_compressed_instruction(_pc, _instr, "c.mv");
+                _opcode = opc::add;
+                _rs1 = reg::zero;
+                _rs2 = rs2;
+                _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
+                _funct = 0b000;
+                
+                _type = instr_type::R;
             } else {
                 /* c.jr */
                 _opcode = opc::jalr;
                 _rs1 = static_cast<reg>((_instr >> 7) & REG_MASK);
                 _rd = reg::zero;
                 _funct = 0b000;
-                _op = alu_op::add;
                 _imm = 0;
                 _type = instr_type::I;
             }
