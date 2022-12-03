@@ -12,7 +12,7 @@
 
 #include <fmt/ostream.h>
 
-#include "elf_file.hpp"
+#include <execution/elf_file.hpp>
 
 namespace fs = std::filesystem;
 
@@ -130,6 +130,10 @@ int main(int argc, char** argv) {
         execution->insert("verbose", true);
     }
 
+    std::vector<std::string> env {
+        "FOO=BAR"
+    };
+
     bool testmode = opts.config && !!opts.config->get_table("testing");
     try {
         elf_file elf { opts.executable };
@@ -137,6 +141,7 @@ int main(int argc, char** argv) {
         memory = elf.load();
 
         executor = elf.make_executor(memory, elf.entry(), opts.config);
+        executor->setup_stack(opts.argv, env);
 
         res = executor->run();
 

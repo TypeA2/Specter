@@ -3,7 +3,6 @@ include(max_warnings)
 add_executable(
     specter
     "main.cpp"
-    "elf_file.hpp" "elf_file.cpp"
 )
 
 target_max_warnings(TARGET specter)

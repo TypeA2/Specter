@@ -7,6 +7,9 @@ namespace arch::rv64 {
     void decoder::_decode() {
         if (_compressed) {
             /* Compressed instructions have an opcode consisting of the lower 2 and upper 3 bits */
+            if (_instr == 0) {
+                throw illegal_compressed_instruction(_pc, _instr, "0x0000 is a reserved instruction");
+            }
             _opcode = static_cast<opc>(((_instr >> 11) & 0b11100) | (_instr & 0b11));
         } else {
             _opcode = static_cast<opc>(_instr & 0x7f);
@@ -49,6 +52,23 @@ namespace arch::rv64 {
             case opc::addw: {
                 _type = instr_type::R;
                 _decode_r();
+                break;
+            }
+
+            case opc::c_addi4spn: {
+                _type = instr_type::I;
+                _opcode = opc::addi;
+                _rd = static_cast<reg>(8 + ((_instr >> 2) & 0b111));
+                _rs1 = reg::sp;
+                _funct = 0b000;
+
+                _op = alu_op::add;
+
+                uint32_t imm = (_instr >> 4) & 0b100;
+                imm |= (_instr >> 2) & 0b1000;
+                imm |= (_instr >> 7) & 0b110000;
+                imm |= (_instr >> 1) & 0b1111000000;
+                _imm = imm;
                 break;
             }
 

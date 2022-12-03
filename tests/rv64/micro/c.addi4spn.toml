@@ -1,0 +1,18 @@
+[execution]
+executable = "c.addi4spn.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+sp = 0x7fffffffff40
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+a1 = 0x7fffffffff44
+a2 = 0x7fffffffffbc
+a3 = 0x8000000001cc
+a4 = 0x80000000033c

@@ -3,15 +3,6 @@
     .global _start
     .type   _start, @function
 _start:
-    # Store some values
-    #sd s0, 0(sp)
-    #sd s1, 8(sp)
-    #sd s2, 16(sp)
-    #sd s3, 24(sp)
-    #sd s4, 32(sp)
-    #sd s5, 40(sp)
-
-    # And just load them, it's not that difficult
     c.ldsp t0, 0(sp)
     c.ldsp t1, 8(sp)
     c.ldsp t2, 16(sp)

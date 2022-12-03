@@ -85,13 +85,6 @@ using namespace magic_enum::bitwise_operators;
 class elf_file {
     std::filesystem::path _path;
     mapped_file _mapping;
-
-    [[nodiscard]] Elf64_Ehdr& hdr() const;
-    [[nodiscard]] std::span<Elf64_Phdr> programs() const;
-    [[nodiscard]] std::span<Elf64_Shdr> sections() const;
-
-    [[nodiscard]] std::string_view str(uint32_t idx) const;
-
     public:
     elf_file(const std::filesystem::path& path);
 
@@ -106,6 +99,12 @@ class elf_file {
     [[nodiscard]] uintptr_t stack_limit() const;
     [[nodiscard]] size_t stack_size() const;
     [[nodiscard]] size_t page_size() const;
+
+    [[nodiscard]] Elf64_Ehdr& hdr() const;
+    [[nodiscard]] std::span<Elf64_Phdr> programs() const;
+    [[nodiscard]] std::span<Elf64_Shdr> sections() const;
+
+    [[nodiscard]] std::string_view str(uint32_t idx) const;
 
     [[nodiscard]] virtual_memory load();
 

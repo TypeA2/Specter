@@ -738,7 +738,12 @@ void rv64_executor::init_registers(std::shared_ptr<cpptoml::table> init) {
             throw std::runtime_error(fmt::format("invalid initialization value: {}", val->as<std::string>()->get()));
         }
 
-        _reg.write(arch::rv64::parse_reg(key), init->get());
+        auto reg = arch::rv64::parse_reg(key);
+        if (reg == arch::rv64::reg::sp) {
+            _sp_init = true;
+        }
+
+        _reg.write(reg, init->get());
     }
 }
 
@@ -768,11 +773,9 @@ bool rv64_executor::validate_registers(std::shared_ptr<cpptoml::table> post, std
     return good;
 }
 
-rv64_executor::rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config)
-    : executor(mem, entry, sp)
+rv64_executor::rv64_executor(elf_file& elf, virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config)
+    : executor(elf, mem, entry, sp)
     , _config { config }, _fmt { _dec, _reg } {
-    _reg.write(arch::rv64::reg::sp, sp);
-
     if (config) {
         init_registers(_config->get_table_qualified("regfile.init"));
 
@@ -785,6 +788,10 @@ rv64_executor::rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp,
 
 int rv64_executor::run() {
     int retval = 0;
+
+    if (!_sp_init) {
+        _reg.write(arch::rv64::reg::sp, sp);
+    }
 
     bool cont = true;
     while (cont) {

@@ -179,7 +179,7 @@ virtual_memory elf_file::load() {
 std::unique_ptr<executor> elf_file::make_executor(virtual_memory& mem, uintptr_t entry, std::shared_ptr<cpptoml::table> config) {
     switch (machine()) {
         case elf::machine::RiscV:
-            return std::make_unique<rv64_executor>(mem, entry, stack_base(), config);
+            return std::make_unique<rv64_executor>(*this, mem, entry, stack_base(), config);
         default:
             break;
     }

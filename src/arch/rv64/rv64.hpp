@@ -58,21 +58,24 @@ namespace arch::rv64 {
 
     enum class opc : uint8_t {
         /* RV64I */
-        lui    = 0b0110111,
-        auipc  = 0b0010111,
-        jal    = 0b1101111,
-        jalr   = 0b1100111,
-        load   = 0b0000011,
-        store  = 0b0100011,
-        addi   = 0b0010011,
-        add    = 0b0110011,
-        ecall  = 0b1110011,
-        addiw  = 0b0011011,
-        addw   = 0b0111011,
+        lui        = 0b0110111,
+        auipc      = 0b0010111,
+        jal        = 0b1101111,
+        jalr       = 0b1100111,
+        load       = 0b0000011,
+        store      = 0b0100011,
+        addi       = 0b0010011,
+        add        = 0b0110011,
+        ecall      = 0b1110011,
+        addiw      = 0b0011011,
+        addw       = 0b0111011,
+
+        /* RVC Q0 */
+        c_addi4spn = 0b0000000,
 
         /* RVC Q2 */
-        c_ldsp = 0b0001110,
-        c_jr   = 0b0010010,
+        c_ldsp     = 0b0001110,
+        c_jr       = 0b0010010,
     };
 
     /* https://github.com/bminor/glibc/blob/master/sysdeps/unix/sysv/linux/riscv/rv64/arch-syscall.h */

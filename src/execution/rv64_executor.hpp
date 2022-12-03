@@ -211,8 +211,9 @@ inline std::ostream& operator<<(std::ostream& os, const rv64::regfile& reg) {
 
 class rv64_executor : public executor {
     std::shared_ptr<cpptoml::table> _config;
-    bool _testmode{};
-    bool _verbose{};
+    bool _testmode = false;
+    bool _verbose = false;
+    bool _sp_init = false;
 
     rv64::decoder dec;
 
@@ -251,7 +252,7 @@ class rv64_executor : public executor {
     bool validate_registers(std::shared_ptr<cpptoml::table> post, std::ostream& os) const;
 
     public:
-    rv64_executor(virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config);
+    rv64_executor(elf_file& elf, virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config);
     
     [[nodiscard]] int run() override;
 

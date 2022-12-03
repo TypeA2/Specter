@@ -1,5 +1,6 @@
 add_library(
 	specter_execution
+    "elf_file.hpp" "elf_file.cpp"
 	"executor.hpp" "executor.cpp"
     "rv64_executor.hpp" "rv64_executor.cpp"
 )

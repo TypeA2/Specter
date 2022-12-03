@@ -205,6 +205,28 @@ namespace arch::rv64 {
             uint16_t instr = _dec.instr();
             fmt::print(os, "{:x}:  {:04x}       ", _dec.pc(), instr);
             switch (static_cast<opc>(((instr >> 11) & 0b11100) | (instr & 0b11))) {
+                case opc::c_addi4spn: {
+                    auto rd = static_cast<reg>(8 + ((instr >> 2) & 0b111));
+                    uint32_t imm = (instr >> 4) & 0b100;
+                    imm |= (instr >> 2) & 0b0000001000;
+                    imm |= (instr >> 7) & 0b0000110000;
+                    imm |= (instr >> 1) & 0b1111000000;
+
+                    fmt::print(os, "c.addi4spn {}, sp, {}", rd, imm);
+                    break;
+                }
+                
+                case opc::c_ldsp: {
+                    auto rd = static_cast<reg>((instr >> 7) & REG_MASK);
+                    uint32_t imm = (instr >> 2) & 0b11000;
+
+                    imm |= (instr >> 7) & 0b100000;
+                    imm |= (instr << 4) & 0b111000000;
+
+                    fmt::print(os, "c.ldsp, {}, {}(sp)", rd, imm);
+                    break;
+                }
+
                 case opc::c_jr: {
                     auto r0 = static_cast<reg>((instr >> 2) & REG_MASK);
                     auto r1 = static_cast<reg>((instr >> 7) & REG_MASK);
