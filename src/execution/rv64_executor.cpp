@@ -45,7 +45,7 @@ bool rv64_executor::exec(int& retval) {
 
     try {
         fmt::print(std::cerr, "error on:\n{}\n", _fmt.instr());
-    } catch (const illegal_instruction&){
+    } catch (const rv64::illegal_instruction&){
         /* pass */
         fmt::print(std::cerr, "error on unknown instruction\n");
     }
