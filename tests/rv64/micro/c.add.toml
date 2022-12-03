@@ -1,0 +1,32 @@
+[execution]
+executable = "c.add.rv64"
+
+[regfile.init]
+t1 = 5678
+t2 = -42
+t3 = 0xf0101010
+
+# 0xf0101010
+t4 = -4027584528
+
+s0 = 1234
+s1 = 1234
+s2 = -42
+s3 = 0xf0101010
+s4 = -4027584528
+
+a0 = 42
+a7 = 93
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = 6912
+s1 = 1192
+s2 = -84
+s3 = 0x1e0202020
+
+# 0xfffffffe1fdfdfe0
+s4 = -8055169056

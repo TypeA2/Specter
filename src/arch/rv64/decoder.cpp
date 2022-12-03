@@ -315,30 +315,49 @@ namespace arch::rv64 {
     }
 
     void decoder::_decode_c_jr() {
+        auto r0 = static_cast<reg>((_instr >> 2) & REG_MASK);
+        auto r1 = static_cast<reg>((_instr >> 7) & REG_MASK);
         if ((_instr >> 12) & 0b1) {
             /* c.ebreak, c.jalr or c.add */
-            throw illegal_compressed_instruction(_pc, _instr, "c.ebreak/c.jalr/c.add");
+            if (r0 == reg::zero) {
+                if (r1 == reg::zero) {
+                    /* c.ebreak */
+                    throw illegal_compressed_instruction(_pc, _instr, "c.ebreak");
+                } else {
+                    /* c.jalr */
+                    throw illegal_compressed_instruction(_pc, _instr, "c.jalr");
+                }
+            } else {
+                /* c.add */
+                _type = instr_type::R;
+                _opcode = opc::add;
+                _op = alu_op::add;
+                _rd = r1;
+                _rs1 = r1;
+                _rs2 = r0;
+                _funct = 0b0000000000;
+            }
+            
         } else {
             _op = alu_op::add;
 
             /* c.jr or c.mv */
-            if (auto rs2 = static_cast<reg>((_instr >> 2) & REG_MASK); rs2 != reg::zero) {
+            if (r0 != reg::zero) {
                 /* c.mv */
+                _type = instr_type::R;
                 _opcode = opc::add;
                 _rs1 = reg::zero;
-                _rs2 = rs2;
-                _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
+                _rs2 = r0;
+                _rd = r1;
                 _funct = 0b000;
-                
-                _type = instr_type::R;
             } else {
                 /* c.jr */
+                _type = instr_type::I;
                 _opcode = opc::jalr;
-                _rs1 = static_cast<reg>((_instr >> 7) & REG_MASK);
+                _rs1 = r1;
                 _rd = reg::zero;
                 _funct = 0b000;
                 _imm = 0;
-                _type = instr_type::I;
             }
         }
     }
