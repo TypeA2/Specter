@@ -96,6 +96,21 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_ld: {
+                fmt::print(os, "c.ld {}, {}({})", _dec.rd(), _dec.imm(), _dec.rs1());
+                break;
+            }
+
+            case opc::c_nop: {
+                auto rd = _dec.rd();
+                if (rd == reg::zero) {
+                    fmt::print(os, "c.nop");
+                } else {
+                    fmt::print(os, "c.addi {}, {}", rd, int64_t(_dec.imm()));
+                }
+                break;
+            }
+
             case opc::c_li: {
                 fmt::print(os, "c.li {}, {}", _dec.rd(), int64_t(_dec.imm()));
                 break;

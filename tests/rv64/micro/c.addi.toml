@@ -1,0 +1,28 @@
+[execution]
+executable = "c.addi.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+t0 = -1
+t1 = 12
+t2 = -13
+t3 = -14
+t4 = -15
+t5 = -68
+t6 = 0xffffffff
+
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+t0 = -33
+t1 = -2
+t2 = -14
+t3 = -14
+t4 = -12
+t5 = -47
+t6 = 0x10000001e

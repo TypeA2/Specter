@@ -72,6 +72,28 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_ld: {
+                _type = instr_type::I;
+                _opcode = opc::load;
+                _rd = static_cast<reg>(8 + ((_instr >> 2) & 0b111));
+                _rs1 = static_cast<reg>(8 + ((_instr >> 7) & 0b111));
+                _funct = 0b011;
+                _op = alu_op::add;
+                _imm = ((_instr >> 7) & 0b111000) | ((_instr << 1) & 0b11000000);
+                break;
+            }
+
+            case opc::c_nop: {
+                _type = instr_type::I;
+                _opcode = opc::addi;
+                _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
+                _rs1 = _rd;
+                _funct = 0b000;
+                _op = alu_op::add;
+                _imm = sign_extend<6>(((_instr >> 2) & 0b11111) | ((_instr >> 7) & 0b100000));
+                break;
+            }
+
             case opc::c_li: {
                 _type = instr_type::I;
                 _opcode = opc::addi;
