@@ -3,24 +3,6 @@
 #include <arch/arch.hpp>
 #include <memory/virtual_memory.hpp>
 
-class illegal_instruction : public std::runtime_error {
-    uintptr_t _addr;
-
-    protected:
-    illegal_instruction(uintptr_t addr, const std::string& msg);
-
-    public:
-    explicit illegal_instruction(uintptr_t addr);
-
-    [[nodiscard]] virtual uintptr_t where() const;
-};
-
-class invalid_syscall : public std::runtime_error {
-    public:
-    invalid_syscall(uintptr_t addr, uint64_t id);
-    invalid_syscall(uintptr_t addr, uint64_t id, std::span<uint64_t> args);
-};
-
 class elf_file;
 class executor {
     protected:
