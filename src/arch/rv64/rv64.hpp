@@ -97,6 +97,9 @@ namespace arch::rv64 {
 
         /* less-than, less-than unsigned */
         lt, ltu,
+
+        /* bitwise */
+        bitwise_xor, bitwise_or, bitwise_and,
     };
 
     /* instr & MASK_OPCODE_COMPRESSED == OPC_FULL_SIZE means 32-bit instr, else 16-bit */

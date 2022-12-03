@@ -152,6 +152,9 @@ namespace arch::rv64 {
                     case 0b000: _op = alu_op::add; break; /* addi */
                     case 0b010: _op = alu_op::lt;  break; /* slti */
                     case 0b011: _op = alu_op::ltu; break; /* sltiu */
+                    case 0b100: _op = alu_op::bitwise_xor; break; /* xori */
+                    case 0b110: _op = alu_op::bitwise_or; break;  /* ori */
+                    case 0b111: _op = alu_op::bitwise_and; break; /* andi */
                 }
                 break;
             }

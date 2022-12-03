@@ -30,6 +30,9 @@ namespace arch::rv64 {
                     case 0b000: return "addi";
                     case 0b010: return "slti";
                     case 0b011: return "sltiu";
+                    case 0b100: return "xori";
+                    case 0b110: return "ori";
+                    case 0b111: return "andi";
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addi");
                 }
             }
@@ -158,6 +161,14 @@ namespace arch::rv64 {
                     case 0b011: { /* sltiu */
                         if (imm == 1) {
                             fmt::print(os, "seqz {}, {}", rd, rs1);
+                            return true;
+                        }
+                        break;
+                    }
+
+                    case 0b100: { /* xori */
+                        if (int64_t(imm) == -1) {
+                            fmt::print(os, "not {}, {}", rd, rs1);
                             return true;
                         }
                         break;

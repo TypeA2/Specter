@@ -36,6 +36,20 @@ namespace arch::rv64 {
             case alu_op::ltu:
                 _res = (_a < _b) ? 1 : 0;
                 break;
+
+            case alu_op::bitwise_xor: {
+                _res = _a ^ _b;
+                break;
+            }
+
+            case alu_op::bitwise_or: {
+                _res = _a | _b;
+                break;
+            }
+            
+            case alu_op::bitwise_and:
+                _res = _a & _b;
+                break;
         }
     }
 }
