@@ -88,6 +88,17 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_slli: {
+                _type = instr_type::I;
+                _opcode = opc::addi;
+                _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
+                _rs1 = _rd;
+                _funct = 0b001;
+                _op = alu_op::sll;
+                _imm = ((_instr >> 2) & 0b11111) | ((_instr >> 7) & 0b100000);
+                break;
+            }
+
             case opc::c_ldsp: {
                 _type = instr_type::I;
                 _opcode = opc::load;
@@ -171,6 +182,15 @@ namespace arch::rv64 {
                     case 0b100: _op = alu_op::bitwise_xor; break; /* xori */
                     case 0b110: _op = alu_op::bitwise_or; break;  /* ori */
                     case 0b111: _op = alu_op::bitwise_and; break; /* andi */
+                    case 0b001: _op = alu_op::sll; break; /* slli */
+                    case 0b101: {
+                        switch (_imm >> 10) {
+                            case 0b00: _op = alu_op::srl; break; /* srli */
+                            case 0b01: _op = alu_op::sra; break; /* srai */
+                        }
+                        _imm &= 0b111111;
+                        break;
+                    }
                 }
                 break;
             }

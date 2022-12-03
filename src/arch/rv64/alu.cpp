@@ -37,18 +37,28 @@ namespace arch::rv64 {
                 _res = (_a < _b) ? 1 : 0;
                 break;
 
-            case alu_op::bitwise_xor: {
+            case alu_op::bitwise_xor:
                 _res = _a ^ _b;
                 break;
-            }
 
-            case alu_op::bitwise_or: {
+            case alu_op::bitwise_or:
                 _res = _a | _b;
                 break;
-            }
-            
+
             case alu_op::bitwise_and:
                 _res = _a & _b;
+                break;
+
+            case alu_op::sll:
+                _res = _a << _b;
+                break;
+
+            case alu_op::srl:
+                _res = _a >> _b;
+                break;
+
+            case alu_op::sra:
+                _res = int64_t(_a) >> _b;
                 break;
         }
     }

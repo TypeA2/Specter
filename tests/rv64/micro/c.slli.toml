@@ -1,0 +1,28 @@
+[execution]
+executable = "c.slli.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+s0 = 1
+s1 = 1
+s2 = 0x7c0ffeedead
+s3 = 0x7c0ffeedead
+s4 = 0x7c0ffeedead
+s5 = -2042
+s6 = -2042
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = 2 # 1 << 1
+s1 = 0x80000000000 # 1 << 43
+s2 = 0x1f03ffbb7ab40
+# 0xd000000000000000
+s3 = -3458764513820540928
+s4 = -9223372036854775808 # 1 << 63
+s5 = -33456128
+s6 = 0xc0000000000000

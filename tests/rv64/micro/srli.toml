@@ -1,0 +1,27 @@
+[execution]
+executable = "srli.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+t0 = 1
+# >32-bit
+t1 = 0x7c0ffeedead
+# -0x7fa
+t2 = -2042
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = 0
+s1 = 0
+s2 = 0x7c0ffeedead
+s3 = 0x1f03ffbb7a
+s4 = 0x1f
+s5 = 0
+s6 = 0x3ffffffffffff
+s7 = 0x7ff
+s8 = 0x3ffffffffffffe0

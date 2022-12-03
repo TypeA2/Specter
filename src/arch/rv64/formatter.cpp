@@ -33,6 +33,14 @@ namespace arch::rv64 {
                     case 0b100: return "xori";
                     case 0b110: return "ori";
                     case 0b111: return "andi";
+                    case 0b001: return "slli";
+                    case 0b101: {
+                        switch (_dec.imm() >> 10) {
+                            case 0b00: return "srli";
+                            case 0b01: return "srai";
+                            default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::srli/srai");
+                        }
+                    }
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addi");
                 }
             }
@@ -75,15 +83,23 @@ namespace arch::rv64 {
     }
 
     void formatter::_format_i(std::ostream& os) const {
+        uint64_t imm = _dec.imm();
         switch (_dec.opcode()) {
             case opc::jalr:
             case opc::load: {
-                fmt::print(os, "{}, {}({})", _dec.rd(), int64_t(_dec.imm()), _dec.rs1());
+                fmt::print(os, "{}, {}({})", _dec.rd(), int64_t(imm), _dec.rs1());
                 break;
             }
 
+            case opc::addi: {
+                if (_dec.funct() == 0b101) {
+                    imm &= 0b111111;
+                }
+                [[fallthrough]];
+            }
+
             default: {
-                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), int64_t(_dec.imm()));
+                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), int64_t(imm));
             }
         }
     }
@@ -102,6 +118,78 @@ namespace arch::rv64 {
 
     void formatter::_format_u(std::ostream& os) const {
         fmt::print(os, "{}, {:#x}", _dec.rd(), _dec.imm());
+    }
+
+    std::ostream& formatter::_format_compressed(std::ostream& os) const {
+        /* Another option would be reverse engineering the original instruction from the translated
+            * instruction, which would probably be even worse than re-decoding like this
+            */
+
+        /* Store as uint32_t to prevent unexpected conversion */
+        uint32_t instr = _dec.instr();
+        fmt::print(os, "{:x}:  {:04x}       ", _dec.pc(), instr);
+        switch (static_cast<opc>(((instr >> 11) & 0b11100) | (instr & 0b11))) {
+            case opc::c_addi4spn: {
+                fmt::print(os, "c.addi4spn {}, sp, {}", _dec.rd(), _dec.imm());
+                break;
+            }
+
+            case opc::c_li: {
+                fmt::print(os, "c.li {}, {}", _dec.rd(), int64_t(_dec.imm()));
+                break;
+            }
+
+            case opc::c_addi16sp: {
+                auto rd = _dec.rd();
+
+                if (rd == reg::sp) {
+                    /* c.addi16sp */
+                    fmt::print(os, "c.addi16sp sp, {}", int64_t(_dec.imm()));
+                } else {
+                    /* c.lui */
+                    fmt::print(os, "c.lui {}, {:#x}",  rd, (_dec.imm() >> 12) & 0xfffff);
+                }
+                break;
+            }
+            
+            case opc::c_slli: {
+                fmt::print(os, "c.slli {}, {}", _dec.rd(), _dec.imm());
+                break;
+            }
+
+            case opc::c_ldsp: {
+                fmt::print(os, "c.ldsp, {}, {}(sp)", _dec.rd(), _dec.imm());
+                break;
+            }
+
+            case opc::c_jr: {
+                auto r0 = static_cast<reg>((instr >> 2) & REG_MASK);
+                auto r1 = static_cast<reg>((instr >> 7) & REG_MASK);
+                if ((instr >> 12) & 0b1) {
+                    if (r0 == reg::zero) {
+                        if (r1 == reg::zero) {
+                            os << "c.ebreak";
+                        } else {
+                            fmt::print(os, "c.jalr {}", r1);
+                        }
+                    } else {
+                        fmt::print(os, "c.add {}, {}", r1, r0);
+                    }
+                } else {
+                    if (r0 == reg::zero) {
+                        fmt::print(os, "c.jr {}", r1);
+                    } else {
+                        fmt::print(os, "c.mv {}, {}", r1, r0);
+                    }
+                }
+                break;
+            }
+
+            default:
+                throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed");
+        }
+
+        return os;
     }
 
     bool formatter::_format_if_pseudo(std::ostream& os) const {
@@ -210,90 +298,7 @@ namespace arch::rv64 {
 
     std::ostream& formatter::instr(std::ostream& os) const {
         if (_dec.compressed()) {
-            /* Another option would be reverse engineering the original instruction from the translated
-             * instruction, which would probably be even worse than re-decoding like this
-             */
-
-            /* Store as uint32_t to prevent unexpected conversion */
-            uint32_t instr = _dec.instr();
-            fmt::print(os, "{:x}:  {:04x}       ", _dec.pc(), instr);
-            switch (static_cast<opc>(((instr >> 11) & 0b11100) | (instr & 0b11))) {
-                case opc::c_addi4spn: {
-                    auto rd = static_cast<reg>(8 + ((instr >> 2) & 0b111));
-                    uint32_t imm = (instr >> 4) & 0b100;
-                    imm |= (instr >> 2) & 0b0000001000;
-                    imm |= (instr >> 7) & 0b0000110000;
-                    imm |= (instr >> 1) & 0b1111000000;
-
-                    fmt::print(os, "c.addi4spn {}, sp, {}", rd, imm);
-                    break;
-                }
-
-                case opc::c_li: {
-                    auto rd = static_cast<reg>((instr >> 7) & REG_MASK);
-                    uint64_t imm = sign_extend<6>(((instr >> 2) & 0b11111) | ((instr >> 7) & 0b100000));
-
-                    fmt::print(os, "c.li {}, {}", rd, int64_t(imm));
-                    break;
-                }
-
-                case opc::c_addi16sp: {
-                    auto rd = static_cast<reg>((instr >> 7) & REG_MASK);
-
-                    if (rd == reg::sp) {
-                        /* c.addi16sp */
-                        uint32_t imm = (instr >> 2) & 0b10000;
-                        imm |= (instr << 3) & 0b0000100000;
-                        imm |= (instr << 1) & 0b0001000000;
-                        imm |= (instr << 4) & 0b0110000000;
-                        imm |= (instr >> 3) & 0b1000000000;
-
-                        fmt::print(os, "c.addi16sp sp, {}", int64_t(sign_extend<10>(imm)));
-                    } else {
-                        /* c.lui */
-                        uint32_t imm = ((instr >> 7) & 0b100000) | ((instr >> 2) & 0b11111);
-                        fmt::print(os, "c.lui {}, {:#x}",  rd, sign_extend<6, uint32_t, uint32_t>(imm) & 0xfffff);
-                    }
-                    break;
-                }
-                
-                case opc::c_ldsp: {
-                    auto rd = static_cast<reg>((instr >> 7) & REG_MASK);
-                    uint32_t imm = (instr >> 2) & 0b11000;
-
-                    imm |= (instr >> 7) & 0b100000;
-                    imm |= (instr << 4) & 0b111000000;
-
-                    fmt::print(os, "c.ldsp, {}, {}(sp)", rd, imm);
-                    break;
-                }
-
-                case opc::c_jr: {
-                    auto r0 = static_cast<reg>((instr >> 2) & REG_MASK);
-                    auto r1 = static_cast<reg>((instr >> 7) & REG_MASK);
-                    if ((instr >> 12) & 0b1) {
-                        if (r0 == reg::zero) {
-                            if (r1 == reg::zero) {
-                                os << "c.ebreak";
-                            } else {
-                                fmt::print(os, "c.jalr {}", r1);
-                            }
-                        } else {
-                            fmt::print(os, "c.add {}, {}", r1, r0);
-                        }
-                    } else {
-                        if (r0 == reg::zero) {
-                            fmt::print(os, "c.jr {}", r1);
-                        } else {
-                            fmt::print(os, "c.mv {}, {}", r1, r0);
-                        }
-                    }
-                    break;
-                }
-
-                default:
-                    throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed");
-            }
+            return _format_compressed(os);
         } else {
             fmt::print(os, "{:x}:  {:08x}   ", _dec.pc(), _dec.instr());
 

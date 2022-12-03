@@ -78,6 +78,7 @@ namespace arch::rv64 {
         c_addi16sp = 0b0001101,
 
         /* RVC Q2 */
+        c_slli     = 0b0000010,
         c_ldsp     = 0b0001110,
         c_jr       = 0b0010010,
     };
@@ -104,6 +105,9 @@ namespace arch::rv64 {
 
         /* bitwise */
         bitwise_xor, bitwise_or, bitwise_and,
+
+        /* shifts */
+        sll, srl, sra,
     };
 
     /* instr & MASK_OPCODE_COMPRESSED == OPC_FULL_SIZE means 32-bit instr, else 16-bit */
