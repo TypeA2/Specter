@@ -82,44 +82,6 @@ namespace arch::rv64 {
         }
     }
 
-    void formatter::_format_i(std::ostream& os) const {
-        uint64_t imm = _dec.imm();
-        switch (_dec.opcode()) {
-            case opc::jalr:
-            case opc::load: {
-                fmt::print(os, "{}, {}({})", _dec.rd(), int64_t(imm), _dec.rs1());
-                break;
-            }
-
-            case opc::addi: {
-                if (_dec.funct() == 0b101) {
-                    imm &= 0b111111;
-                }
-                [[fallthrough]];
-            }
-
-            default: {
-                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), int64_t(imm));
-            }
-        }
-    }
-    
-    void formatter::_format_s(std::ostream& os) const {
-        fmt::print(os, "{}, {}({})", _dec.rs2(), int64_t(_dec.imm()), _dec.rs1());
-    }
-
-    void formatter::_format_j(std::ostream& os) const {
-        fmt::print(os, "{}, {:x} <{:+x}>", _dec.rd(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
-    }
-
-    void formatter::_format_r(std::ostream& os) const {
-        fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.rs2());
-    }
-
-    void formatter::_format_u(std::ostream& os) const {
-        fmt::print(os, "{}, {:#x}", _dec.rd(), _dec.imm());
-    }
-
     std::ostream& formatter::_format_compressed(std::ostream& os) const {
         /* Another option would be reverse engineering the original instruction from the translated
             * instruction, which would probably be even worse than re-decoding like this
@@ -185,8 +147,69 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_sdsp: {
+                fmt::print(os, "c.sdsp {}, {}(sp)", _dec.rd(), _dec.imm());
+                break;
+            }
+
             default:
                 throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed");
+        }
+
+        return os;
+    }
+
+    std::ostream& formatter::_format_full(std::ostream& os) const {
+         fmt::print(os, "{:x}:  {:08x}   ", _dec.pc(), _dec.instr());
+
+        if (_format_if_pseudo(os)) {
+            return os;
+        }
+
+        os << _instr_name() << ' ';
+
+        switch (_dec.type()) {
+            case instr_type::I: {
+                uint64_t imm = _dec.imm();
+                switch (_dec.opcode()) {
+                    case opc::jalr:
+                    case opc::load: {
+                        fmt::print(os, "{}, {}({})", _dec.rd(), int64_t(imm), _dec.rs1());
+                        break;
+                    }
+
+                    case opc::addi: {
+                        if (_dec.funct() == 0b101) {
+                            imm &= 0b111111;
+                        }
+                        [[fallthrough]];
+                    }
+
+                    default: {
+                        fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), int64_t(imm));
+                    }
+                }
+                break;
+            }
+
+            case instr_type::S:
+                fmt::print(os, "{}, {}({})", _dec.rs2(), int64_t(_dec.imm()), _dec.rs1());
+                break;
+
+            case instr_type::J:
+                fmt::print(os, "{}, {:x} <{:+x}>", _dec.rd(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
+                break;
+
+            case instr_type::R:
+                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.rs2());
+                break;
+
+            case instr_type::U:
+                fmt::print(os, "{}, {:#x}", _dec.rd(), _dec.imm());
+                break;
+
+            default:
+                throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::print::args");
         }
 
         return os;
@@ -300,41 +323,8 @@ namespace arch::rv64 {
         if (_dec.compressed()) {
             return _format_compressed(os);
         } else {
-            fmt::print(os, "{:x}:  {:08x}   ", _dec.pc(), _dec.instr());
-
-            if (_format_if_pseudo(os)) {
-                return os;
-            }
-
-            os << _instr_name() << ' ';
-
-            switch (_dec.type()) {
-                case instr_type::I:
-                    _format_i(os);
-                    break;
-
-                case instr_type::S:
-                    _format_s(os);
-                    break;
-
-                case instr_type::J:
-                    _format_j(os);
-                    break;
-
-                case instr_type::R:
-                    _format_r(os);
-                    break;
-
-                case instr_type::U:
-                    _format_u(os);
-                    break;
-
-                default:
-                    throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::print::args");
-            }
+           return _format_full(os);
         }
-        
-        return os;
     }
 
     std::ostream& formatter::regs(std::ostream& os) const {

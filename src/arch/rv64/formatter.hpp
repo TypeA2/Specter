@@ -12,15 +12,8 @@ namespace arch::rv64 {
 
         [[nodiscard]] std::string_view _instr_name() const;
 
-        void _format_args(std::ostream& os) const;
-
-        void _format_i(std::ostream& os) const;
-        void _format_s(std::ostream& os) const;
-        void _format_j(std::ostream& os) const;
-        void _format_r(std::ostream& os) const;
-        void _format_u(std::ostream& os) const;
-
         std::ostream& _format_compressed(std::ostream& os) const;
+        std::ostream& _format_full(std::ostream& os) const;
 
         [[nodiscard]] bool _format_if_pseudo(std::ostream& os) const;
 
