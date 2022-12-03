@@ -74,13 +74,17 @@ namespace arch::rv64 {
 
             case opc::c_li: {
                 _type = instr_type::I;
-                _opcode= opc::addi;
+                _opcode = opc::addi;
                 _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
                 _rs1 = reg::zero;
                 _funct = 0b000;
-
                 _op = alu_op::add;
                 _imm = sign_extend<6>(((_instr >> 2) & 0b11111) | ((_instr >> 7) & 0b100000));
+                break;
+            }
+
+            case opc::c_addi16sp: {
+                _decode_addi16sp();
                 break;
             }
 
@@ -248,6 +252,34 @@ namespace arch::rv64 {
             case opc::lui:   _op = alu_op::forward_a; break;
             case opc::auipc: _op = alu_op::add; break;
             default: throw illegal_instruction(_pc, _instr, "r-type");
+        }
+    }
+
+    void decoder::_decode_addi16sp() {
+        _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
+
+        if (_rd == reg::sp) {
+            /* c.addi16sp */
+            _type = instr_type::I;
+            _opcode = opc::addi;
+            _rs1 = reg::sp;
+            _funct = 0b000;
+            _op = alu_op::add;
+
+            uint32_t imm = (_instr >> 2) & 0b10000;
+            imm |= (_instr << 3) & 0b0000100000;
+            imm |= (_instr << 1) & 0b0001000000;
+            imm |= (_instr << 4) & 0b0110000000;
+            imm |= (_instr >> 3) & 0b1000000000;
+
+            _imm = sign_extend<10>(imm);
+        } else {
+            /* c.lui */
+            _type = instr_type::U;
+            _opcode = opc::lui;
+            _op = alu_op::forward_a;
+
+            _imm = sign_extend<18>(((_instr << 5) & 0x20000) | ((_instr << 10) & 0x1f000));
         }
     }
 

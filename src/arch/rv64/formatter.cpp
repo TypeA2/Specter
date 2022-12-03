@@ -236,6 +236,26 @@ namespace arch::rv64 {
                     fmt::print(os, "c.li {}, {}", rd, int64_t(imm));
                     break;
                 }
+
+                case opc::c_addi16sp: {
+                    auto rd = static_cast<reg>((instr >> 7) & REG_MASK);
+
+                    if (rd == reg::sp) {
+                        /* c.addi16sp */
+                        uint32_t imm = (instr >> 2) & 0b10000;
+                        imm |= (instr << 3) & 0b0000100000;
+                        imm |= (instr << 1) & 0b0001000000;
+                        imm |= (instr << 4) & 0b0110000000;
+                        imm |= (instr >> 3) & 0b1000000000;
+
+                        fmt::print(os, "c.addi16sp sp, {}", int64_t(sign_extend<10>(imm)));
+                    } else {
+                        /* c.lui */
+                        uint32_t imm = ((instr >> 7) & 0b100000) | ((instr >> 2) & 0b11111);
+                        fmt::print(os, "c.lui {}, {:#x}",  rd, sign_extend<6, uint32_t, uint32_t>(imm) & 0xfffff);
+                    }
+                    break;
+                }
                 
                 case opc::c_ldsp: {
                     auto rd = static_cast<reg>((instr >> 7) & REG_MASK);

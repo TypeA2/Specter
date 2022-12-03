@@ -1,0 +1,25 @@
+[execution]
+executable = "c.lui.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+s0 = 0xfaf
+s1 = 0xfaf
+s2 = 0xfaf
+s3 = 0xfaf
+s4 = 0xfaf
+s5 = 0xfaf
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = -131072
+s1 = -57344
+s2 = -4096
+s3 = 0x1000
+s4 = 0xd000
+s5 = 0x1f000

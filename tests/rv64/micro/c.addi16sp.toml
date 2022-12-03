@@ -1,0 +1,20 @@
+[execution]
+executable = "c.addi16sp.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+ra = 0x7fffffffff40
+
+[testing]
+retval = 42
+depends = [ "ecall", "addi" ]
+
+[testing.regfile.post]
+t0 = 0x7ffffffffd40
+t1 = 0x7ffffffffe00
+t2 = 0x7fffffffff30
+t3 = 0x7fffffffff50
+t4 = 0x800000000090
+t5 = 0x800000000130

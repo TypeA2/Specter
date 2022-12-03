@@ -75,6 +75,7 @@ namespace arch::rv64 {
 
         /* RVC Q1 */
         c_li       = 0b0001001,
+        c_addi16sp = 0b0001101,
 
         /* RVC Q2 */
         c_ldsp     = 0b0001110,
