@@ -213,7 +213,9 @@ namespace arch::rv64 {
             /* Another option would be reverse engineering the original instruction from the translated
              * instruction, which would probably be even worse than re-decoding like this
              */
-            uint16_t instr = _dec.instr();
+
+            /* Store as uint32_t to prevent unexpected conversion */
+            uint32_t instr = _dec.instr();
             fmt::print(os, "{:x}:  {:04x}       ", _dec.pc(), instr);
             switch (static_cast<opc>(((instr >> 11) & 0b11100) | (instr & 0b11))) {
                 case opc::c_addi4spn: {
@@ -224,6 +226,14 @@ namespace arch::rv64 {
                     imm |= (instr >> 1) & 0b1111000000;
 
                     fmt::print(os, "c.addi4spn {}, sp, {}", rd, imm);
+                    break;
+                }
+
+                case opc::c_li: {
+                    auto rd = static_cast<reg>((instr >> 7) & REG_MASK);
+                    uint64_t imm = sign_extend<6>(((instr >> 2) & 0b11111) | ((instr >> 7) & 0b100000));
+
+                    fmt::print(os, "c.li {}, {}", rd, int64_t(imm));
                     break;
                 }
                 
