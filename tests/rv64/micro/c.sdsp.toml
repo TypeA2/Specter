@@ -1,0 +1,28 @@
+[execution]
+executable = "c.sdsp.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+sp = 0x20000
+
+s0 = 15
+s1 = -1234
+s2 = 0x10000
+s3 = 0x20008
+s4 = -4539648138848387345
+s5 = 0x126d126d126d126d
+
+[testing]
+retval = 42
+depends = [ "ecall", "c.ldsp" ]
+
+[testing.regfile.post]
+t0 = 15
+t1 = -1234
+t2 = 0x10000
+t3 = 0x20008
+# 0xc0ffee11deadbeef
+t4 = -4539648138848387345
+t5 = 0x126d126d126d126d

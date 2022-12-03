@@ -81,6 +81,7 @@ namespace arch::rv64 {
         c_slli     = 0b0000010,
         c_ldsp     = 0b0001110,
         c_jr       = 0b0010010,
+        c_sdsp     = 0b0011110,
     };
 
     /* https://github.com/bminor/glibc/blob/master/sysdeps/unix/sysv/linux/riscv/rv64/arch-syscall.h */

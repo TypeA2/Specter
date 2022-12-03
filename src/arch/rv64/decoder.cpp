@@ -120,6 +120,17 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_sdsp: {
+                _type = instr_type::S;
+                _opcode = opc::store;
+                _rs2 = static_cast<reg>((_instr >> 2) & REG_MASK);
+                _rs1 = reg::sp;
+                _funct = 0b011;
+                _op = alu_op::add;
+                _imm = ((_instr >> 7) & 0b111000) | ((_instr >> 1) & 0b111000000);
+                break;
+            }
+
             default:
                 if (_compressed) {
                     throw illegal_compressed_instruction(_pc, _instr, "decode compressed");
