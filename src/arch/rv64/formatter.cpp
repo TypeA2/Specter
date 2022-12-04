@@ -72,6 +72,7 @@ namespace arch::rv64 {
             case opc::add: {
                 switch (_dec.funct()) {
                     case 0b0000000000: return "add";
+                    case 0b0100000000: return "sub";
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::add");
                 }
             }

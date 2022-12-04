@@ -106,7 +106,7 @@ namespace arch::rv64 {
         /* Use ALU as a muxer */
         forward_a, forward_b,
 
-        add,
+        add, sub,
 
         addw, subw,
 

@@ -1,0 +1,27 @@
+[execution]
+executable = "sub.rv64"
+
+[regfile.init]
+t0 = 1234
+t1 = 5678
+t2 = -42
+t3 = 0xf0101010
+
+# 0xf0101010
+t4 = -4027584528
+
+s2 = -1
+
+a0 = 42
+a7 = 93
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = -4444
+s1 = 1276
+s2 = 0
+s3 = 0x1e0202020
+s4 = -8055169056

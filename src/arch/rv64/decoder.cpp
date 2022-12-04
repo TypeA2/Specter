@@ -369,6 +369,7 @@ namespace arch::rv64 {
             case opc::add: {
                 switch (_funct) {
                     case 0b0000000000: _op = alu_op::add; break; /* add */
+                    case 0b0100000000: _op = alu_op::sub; break; /* sub */
                     default: throw illegal_instruction(_pc, _instr, "add");
                 }
                 break;
