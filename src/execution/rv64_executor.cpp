@@ -264,17 +264,28 @@ int rv64_executor::run() {
     }
 
     bool cont = true;
-    while (cont) {
-        fetch();
-        cont = exec(retval);
-        next_instr();
 
-        cycles += 1;
+    try {
+        start_time = std::chrono::steady_clock::now();
+        while (cont) {
+            fetch();
+            cont = exec(retval);
+            next_instr();
 
-        if (_verbose || !_testmode) {
-            _fmt.instr(std::cerr) << '\n';
+            cycles += 1;
+            instructions += 1;
+
+            if (_verbose || !_testmode) {
+                _fmt.instr(std::cerr) << '\n';
+            }
         }
+        end_time = std::chrono::steady_clock::now();
+    } catch (std::exception&) {
+        /* Less accurate because overhead but it's as close as it'll get*/
+        end_time = std::chrono::steady_clock::now();
+        throw;
     }
+    
 
     if (_testmode) {
         bool good = true;

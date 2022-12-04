@@ -8,16 +8,10 @@
 #include <fmt/ostream.h>
 
 executor::executor(elf_file& elf, virtual_memory& mem, uintptr_t entry, uintptr_t sp)
-    : elf { elf }, mem { mem }, entry { entry }, pc { entry }, sp { sp }, cycles { 0 } {
+    : elf { elf }, mem { mem }, entry { entry }, pc { entry }, sp { sp }
+    , cycles { 0 }, instructions { 0 }
+    , start_time { }, end_time { } {
 
-}
-
-uintptr_t executor::current_pc() const {
-    return pc;
-}
-
-size_t executor::current_cycles() const {
-    return cycles;
 }
 
 void executor::setup_stack(std::span<std::string> argv, std::span<std::string> env) {

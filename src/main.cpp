@@ -11,6 +11,7 @@
 #include <cpptoml.h>
 
 #include <fmt/ostream.h>
+#include <fmt/chrono.h>
 
 #include <execution/elf_file.hpp>
 
@@ -135,6 +136,8 @@ int main(int argc, char** argv) {
     };
 
     bool testmode = opts.config && !!opts.config->get_table("testing");
+    size_t read_before;
+    size_t written_before;
     try {
         elf_file elf { opts.executable };
 
@@ -142,6 +145,9 @@ int main(int argc, char** argv) {
 
         executor = elf.make_executor(memory, elf.entry(), opts.config);
         executor->setup_stack(opts.argv, env);
+
+        read_before = memory.bytes_read();
+        written_before = memory.bytes_written();
 
         res = executor->run();
 
@@ -166,13 +172,61 @@ int main(int argc, char** argv) {
         res = EXIT_FAILURE;
     }
 
-    auto multiple = [](size_t n) { return (n == 1) ? "" : "s"; };
+    auto multiple = [](std::string_view text, size_t n) {
+        return fmt::format("{} {}{}", n, text, (n == 1) ? "" : "s");
+    };
+
+    auto auto_time = [](std::chrono::nanoseconds time) -> std::string {
+        using namespace std::chrono_literals;
+        if (time < 1us) {
+            return fmt::format("{} ns", time.count());
+        } else if (time < 1ms) {
+            return fmt::format("{:.4} us", time.count() / 1e3);
+        } else if (time < 1s) {
+            return fmt::format("{:.4} ms", time.count() / 1e6);
+        } else {
+            return fmt::format("{:.4} s", time.count() / 1e9);
+        }
+    };
+
+    auto auto_si = [](double n) -> std::string {
+        if (n < 1e3) {
+            return fmt::format("{}", std::round(n));
+        } else if (n < 1e6) {
+            return fmt::format("{}k", std::round(n / 1e3));
+        } else if (n < 1e9) {
+            return fmt::format("{}M", std::round(n / 1e6));
+        } else {
+            return fmt::format("{}G", std::round(n / 1e9));
+        }
+    };
+
+    auto auto_bytes = [](double n) -> std::string {
+        if (n < 1024) {
+            return fmt::format("{} bytes", std::round(n));
+        } else if (n < (1024 * 1024)) {
+            return fmt::format("{:.4}KiB", std::round(n / 1024.));
+        } else if (n < (1024 * 1024 * 1024)) {
+            return fmt::format("{:.4}MiB", std::round(n / (1024. * 1024)));
+        } else {
+            return fmt::format("{:.4}GiB", std::round(n / (1024. * 1024 * 1024)));
+        }
+    };
 
     if (!testmode && executor) {
         fmt::print(std::cerr, "STATE:\n{}\n", fmt::streamed(*executor));
-        fmt::print(std::cerr, "{} instruction{} executed\n", executor->current_cycles(), multiple(executor->current_cycles()));
-        fmt::print(std::cerr, "{} byte{} read, {} byte{} written\n",
-            memory.bytes_read(), multiple(memory.bytes_read()), memory.bytes_written(), multiple(memory.bytes_written()));
+
+        // size_t cycles = executor->current_cycles();
+        size_t instructions = executor->current_instructions();
+        size_t read = memory.bytes_read() - read_before;
+        size_t written = memory.bytes_written() - written_before;
+        auto runtime = executor->last_runtime();
+        double seconds = (runtime.count() / 1e9);
+
+        fmt::print(std::cerr, "{} executed in {}\n", multiple("instruction", instructions), auto_time(runtime));
+        fmt::print(std::cerr, "  {}/instr ({} instr/sec)\n", auto_time(runtime / instructions), auto_si(instructions / seconds));
+        fmt::print(std::cerr, "{} read, {} written\n", multiple("byte", read), multiple("byte", written));
+        fmt::print(std::cerr, "  {}/s read, {}/s write\n", auto_bytes(read / seconds), auto_bytes(written / seconds));
     }
 
     return res;
