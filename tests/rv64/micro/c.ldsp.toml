@@ -9,7 +9,7 @@ sp = 0x20000
 
 [testing]
 retval = 42
-depends = "ecall"
+depends = [ "ecall", "load" ]
 
 [testing.regfile.post]
 t0 = 15

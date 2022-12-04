@@ -20,7 +20,7 @@ a7 = 93
 
 [testing]
 retval = 42
-depends = "ecall"
+depends = [ "ecall", "add" ]
 
 [testing.regfile.post]
 s0 = 6912

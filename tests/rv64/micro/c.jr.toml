@@ -12,7 +12,7 @@ t1 = 0x1001c
 
 [testing]
 retval = 42
-depends = [ "ecall", "addi" ]
+depends = [ "ecall", "addi", "jalr" ]
 
 [testing.regfile.post]
 ra = 0

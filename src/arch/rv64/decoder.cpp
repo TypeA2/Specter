@@ -88,6 +88,17 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_sd: {
+                _type = instr_type::S;
+                _opcode = opc::store;
+                _rs1 = static_cast<reg>(8 + ((_instr >> 7) & 0b111));
+                _rs2 = static_cast<reg>(8 + ((_instr >> 2) & 0b111));
+                _funct = 0b011;
+                _op = alu_op::add;
+                _imm = ((_instr >> 7) & 0b111000) | ((_instr << 1) & 0b11000000);
+                break;
+            }
+
             case opc::c_nop: {
                 _type = instr_type::I;
                 _opcode = opc::addi;
@@ -153,6 +164,22 @@ namespace arch::rv64 {
                 _funct = 0b001;
                 _op = alu_op::sll;
                 _imm = ((_instr >> 2) & 0b11111) | ((_instr >> 7) & 0b100000);
+                break;
+            }
+
+            case opc::c_lwsp: {
+                _type = instr_type::I;
+                _opcode = opc::load;
+                _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
+                _rs1 = reg::sp;
+                _funct = 0b010;
+                _op = alu_op::add;
+
+                uint32_t imm = (_instr >> 2) & 0b11100;
+                imm |= (_instr >> 7) & 0b00100000;
+                imm |= (_instr << 4) & 0b11000000;
+
+                _imm = imm;
                 break;
             }
 

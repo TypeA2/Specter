@@ -16,7 +16,7 @@ t6 = 0xffffffff
 
 [testing]
 retval = 42
-depends = "ecall"
+depends = [ "ecall", "addi" ]
 
 [testing.regfile.post]
 t0 = -33

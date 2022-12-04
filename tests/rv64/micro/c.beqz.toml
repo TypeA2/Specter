@@ -16,7 +16,7 @@ a1 = 0
 
 [testing]
 retval = 42
-depends = [ "ecall", "addi" ]
+depends = [ "ecall", "addi", "beq" ]
 
 [testing.regfile.post]
 t0 = 123

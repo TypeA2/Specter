@@ -15,7 +15,7 @@ s6 = -2042
 
 [testing]
 retval = 42
-depends = "ecall"
+depends = [ "ecall", "slli" ]
 
 [testing.regfile.post]
 s0 = 2 # 1 << 1

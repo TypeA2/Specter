@@ -1,0 +1,28 @@
+[execution]
+executable = "c.lwsp.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+sp = 0x20000
+
+[testing]
+retval = 42
+depends = [ "ecall", "load" ]
+
+[testing.regfile.post]
+t0 = 15
+t1 = 0
+t2 = -1234
+t3 = -1
+t4 = 0x10000
+t5 = 0
+s0 = 0x20008
+s1 = 0
+# 0xdeadbeef
+s2 = -559038737
+# 0xc0ffee11
+s3 = -1056969199
+s4 = 0x126d126d
+s5 = 0x126d126d

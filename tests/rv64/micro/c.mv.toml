@@ -12,7 +12,7 @@ t2 = 0x7a7a7a7a7a7a7a7a
 
 [testing]
 retval = 42
-depends = "ecall"
+depends = [ "ecall", "add" ]
 
 [testing.regfile.post]
 ra = 0

@@ -114,6 +114,11 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_sd: {
+                fmt::print(os, "c.sd {}, {}({})", _dec.rs2(), _dec.imm(), _dec.rs1());
+                break;
+            }
+
             case opc::c_nop: {
                 auto rd = _dec.rd();
                 if (rd == reg::zero) {
@@ -142,6 +147,11 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_beqz: {
+                fmt::print(os, "c.beqz {}, {:x} <{:+x}>", _dec.rs1(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
+                break;
+            }
+
             case opc::c_bnez: {
                 fmt::print(os, "c.bnez {}, {:x} <{:+x}>", _dec.rs1(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
                 break;
@@ -149,6 +159,11 @@ namespace arch::rv64 {
             
             case opc::c_slli: {
                 fmt::print(os, "c.slli {}, {}", _dec.rd(), _dec.imm());
+                break;
+            }
+
+            case opc::c_lwsp: {
+                fmt::print(os, "c.lwsp {}, {}(sp)", _dec.rd(), _dec.imm());
                 break;
             }
 

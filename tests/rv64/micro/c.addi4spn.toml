@@ -9,7 +9,7 @@ sp = 0x7fffffffff40
 
 [testing]
 retval = 42
-depends = "ecall"
+depends = [ "ecall", "addi" ]
 
 [testing.regfile.post]
 a1 = 0x7fffffffff44

@@ -19,7 +19,7 @@ s3 = -123456789
 
 [testing]
 retval = 42
-depends = "ecall"
+depends = [ "ecall", "addi" ]
 
 [testing.regfile.post]
 t0 = -32

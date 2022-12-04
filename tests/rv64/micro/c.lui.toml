@@ -14,7 +14,7 @@ s5 = 0xfaf
 
 [testing]
 retval = 42
-depends = "ecall"
+depends = [ "ecall", "lui" ]
 
 [testing.regfile.post]
 s0 = -131072
