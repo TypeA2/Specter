@@ -88,6 +88,17 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_sw: {
+                _type = instr_type::S;
+                _opcode = opc::store;
+                _rs1 = static_cast<reg>(8 + ((_instr >> 7) & 0b111));
+                _rs2 = static_cast<reg>(8 + ((_instr >> 2) & 0b111));
+                _funct = 0b010;
+                _op = alu_op::add;
+                _imm = ((_instr >> 4) & 0b100) | ((_instr >> 7) & 0b111000) | ((_instr << 1) & 0b1000000);
+                break;
+            }
+
             case opc::c_sd: {
                 _type = instr_type::S;
                 _opcode = opc::store;

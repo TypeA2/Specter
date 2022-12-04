@@ -114,6 +114,11 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_sw: {
+                fmt::print(os, "c.sw {}, {}({})", _dec.rs2(), _dec.imm(), _dec.rs1());
+                break;
+            }
+
             case opc::c_sd: {
                 fmt::print(os, "c.sd {}, {}({})", _dec.rs2(), _dec.imm(), _dec.rs1());
                 break;
