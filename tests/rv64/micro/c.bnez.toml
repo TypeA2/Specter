@@ -1,0 +1,25 @@
+[execution]
+executable = "c.bnez.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+t0 = -1
+t1 = -1
+t2 = -1
+t3 = -1
+
+s0 = 0x7fa
+s1 = 0
+a1 = -42
+
+[testing]
+retval = 42
+depends = [ "ecall", "addi" ]
+
+[testing.regfile.post]
+t0 = 123
+t1 = 124
+t2 = 125
+t3 = 126

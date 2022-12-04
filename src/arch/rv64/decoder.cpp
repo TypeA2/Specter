@@ -35,6 +35,11 @@ namespace arch::rv64 {
                 _decode_i();
                 break;
 
+            case opc::branch:
+                _type = instr_type::B;
+                _decode_b();
+                break;
+
             case opc::store:
                 _type = instr_type::S;
                 _decode_s();
@@ -107,6 +112,36 @@ namespace arch::rv64 {
 
             case opc::c_addi16sp: {
                 _decode_addi16sp();
+                break;
+            }
+
+            case opc::c_beqz:
+            case opc::c_bnez: {
+                _type = instr_type::B;
+                _rs1 = static_cast<reg>(8 + ((_instr >> 7) & 0b111));
+                _rs2 = reg::zero;
+
+                switch (_opcode) {
+                    case opc::c_beqz:
+                        _funct = 0b000;
+                        _op = alu_op::eq;
+                        break;
+
+                    case opc::c_bnez:
+                        _funct = 0b001;
+                        _op = alu_op::ne;
+                        break;
+
+                    default: throw illegal_compressed_instruction(_pc, _instr, "decode c.beqz/c.bnez (how?)");
+                }
+
+                uint32_t imm = (_instr >> 2) & 0b110;
+                imm |= (_instr >> 7) & 0b000011000;
+                imm |= (_instr << 3) & 0b000100000;
+                imm |= (_instr << 1) & 0b011000000;
+                imm |= (_instr >> 4) & 0b100000000;
+
+                _imm = sign_extend<9>(imm);
                 break;
             }
 
@@ -305,6 +340,28 @@ namespace arch::rv64 {
             case opc::lui:   _op = alu_op::forward_a; break;
             case opc::auipc: _op = alu_op::add; break;
             default: throw illegal_instruction(_pc, _instr, "r-type");
+        }
+    }
+
+    void decoder::_decode_b() {
+        _rs1 = static_cast<reg>((_instr >> 15) & REG_MASK);
+        _rs2 = static_cast<reg>((_instr >> 20) & REG_MASK);
+        _funct = (_instr >> 12) & 0b111;
+
+        uint32_t imm = (_instr >> 7) & 0b11110;
+        imm |= (_instr >> 20) & 0b0011111100000;
+        imm |= (_instr << 4)  & 0b0100000000000;
+        imm |= (_instr >> 19) & 0b1000000000000;
+
+        _imm = sign_extend<13>(imm);
+
+        switch (_funct) {
+            case 0b000: _op = alu_op::eq;  break; /* beq */
+            case 0b001: _op = alu_op::ne;  break; /* bne */
+            case 0b100: _op = alu_op::lt;  break; /* blt */
+            case 0b101: _op = alu_op::ge;  break; /* bge */
+            case 0b110: _op = alu_op::ltu; break; /* bltu */
+            case 0b111: _op = alu_op::geu; break; /* bgeu */
         }
     }
 

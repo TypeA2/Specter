@@ -1,0 +1,28 @@
+[execution]
+executable = "bltu.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+t0 = -1
+t1 = -1
+t2 = -1
+t3 = -1
+
+s0 = 42
+s1 = -42
+s2 = -2042
+s3 = 0x77ffaa
+s4 = 0xffffffffffffffe
+s5 = 0xfffffffffffffff
+
+[testing]
+retval = 42
+depends = [ "ecall", "addi" ]
+
+[testing.regfile.post]
+t0 = 123
+t1 = 124
+t2 = 125
+t3 = 126

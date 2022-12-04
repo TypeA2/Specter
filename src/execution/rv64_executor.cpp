@@ -34,7 +34,7 @@ bool rv64_executor::exec(int& retval) {
             return _exec_s();
 
         case rv64::instr_type::B:
-            break;
+            return _exec_b();
 
         case rv64::instr_type::U:
             return _exec_u();
@@ -152,6 +152,19 @@ bool rv64_executor::_exec_u() {
     _alu.set_op(_dec.op());
     _alu.pulse();
     _reg.write(_dec.rd(), _alu.result());
+    return true;
+}
+
+bool rv64_executor::_exec_b() {
+    _alu.set_a(_reg.read(_dec.rs1()));
+    _alu.set_b(_reg.read(_dec.rs2()));
+    _alu.set_op(_dec.op());
+    _alu.pulse();
+
+    if (_alu.result()) {
+        _next_pc = pc + int64_t(_dec.imm());
+    }
+
     return true;
 }
 

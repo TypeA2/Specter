@@ -29,12 +29,28 @@ namespace arch::rv64 {
                 _res = sign_extend(uint64_t(int64_t(_a) - int64_t(_b)) & 0xffffffff, 32);
                 break;
 
+            case alu_op::eq:
+                _res = (_a == _b) ? 1 : 0;
+                break;
+
+            case alu_op::ne:
+                _res = (_a != _b) ? 1 : 0;
+                break;
+
             case alu_op::lt:
                 _res = (int64_t(_a) < int64_t(_b)) ? 1 : 0;
                 break;
 
+            case alu_op::ge:
+                _res = (int64_t(_a) >= int64_t(_b)) ? 1 : 0;
+                break;
+
             case alu_op::ltu:
                 _res = (_a < _b) ? 1 : 0;
+                break;
+
+            case alu_op::geu:
+                _res = (_a >= _b) ? 1 : 0;
                 break;
 
             case alu_op::bitwise_xor:

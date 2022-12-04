@@ -22,6 +22,9 @@ namespace arch::rv64 {
 
         void pulse();
 
+        [[nodiscard]] uint64_t a() const { return _a; }
+        [[nodiscard]] uint64_t b() const { return _b; }
+        [[nodiscard]] alu_op op() const { return _op; }
         [[nodiscard]] uint64_t result() const { return _res; }
     };
 }

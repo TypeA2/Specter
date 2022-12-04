@@ -30,6 +30,7 @@ namespace arch::rv64 {
         void _decode_j();
         void _decode_r();
         void _decode_u();
+        void _decode_b();
 
         /* Compressed instructions decode to full instructions */
         void _decode_addi16sp();

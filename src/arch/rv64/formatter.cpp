@@ -12,6 +12,19 @@ namespace arch::rv64 {
             case opc::auipc: return "auipc";
             case opc::jal: return "jal";
             case opc::jalr: return "jalr";
+
+            case opc::branch: {
+                switch (_dec.funct()) {
+                    case 0b000: return "beq";
+                    case 0b001: return "bne";
+                    case 0b100: return "blt";
+                    case 0b101: return "bge";
+                    case 0b110: return "bltu";
+                    case 0b111: return "bgeu";
+                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::branch");
+                }
+            }
+
             case opc::load: {
                 switch (_dec.funct()) {
                     case 0b000: return "lb";
@@ -84,8 +97,8 @@ namespace arch::rv64 {
 
     std::ostream& formatter::_format_compressed(std::ostream& os) const {
         /* Another option would be reverse engineering the original instruction from the translated
-            * instruction, which would probably be even worse than re-decoding like this
-            */
+         * instruction, which would probably be even worse than re-decoding like this
+         */
 
         /* Store as uint32_t to prevent unexpected conversion */
         uint32_t instr = _dec.instr();
@@ -126,6 +139,11 @@ namespace arch::rv64 {
                     /* c.lui */
                     fmt::print(os, "c.lui {}, {:#x}",  rd, (_dec.imm() >> 12) & 0xfffff);
                 }
+                break;
+            }
+
+            case opc::c_bnez: {
+                fmt::print(os, "c.bnez {}, {:x} <{:+x}>", _dec.rs1(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
                 break;
             }
             
@@ -221,6 +239,10 @@ namespace arch::rv64 {
 
             case instr_type::U:
                 fmt::print(os, "{}, {:#x}", _dec.rd(), _dec.imm());
+                break;
+
+            case instr_type::B:
+                fmt::print(os, "{}, {}, {:x} <{:+x}>", _dec.rs1(), _dec.rs2(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
                 break;
 
             default:

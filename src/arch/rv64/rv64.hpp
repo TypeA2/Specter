@@ -62,6 +62,7 @@ namespace arch::rv64 {
         auipc      = 0b0010111,
         jal        = 0b1101111,
         jalr       = 0b1100111,
+        branch     = 0b1100011,
         load       = 0b0000011,
         store      = 0b0100011,
         addi       = 0b0010011,
@@ -78,6 +79,8 @@ namespace arch::rv64 {
         c_nop      = 0b0000001,
         c_li       = 0b0001001,
         c_addi16sp = 0b0001101,
+        c_beqz     = 0b0011001,
+        c_bnez     = 0b0011101,
 
         /* RVC Q2 */
         c_slli     = 0b0000010,
@@ -103,8 +106,8 @@ namespace arch::rv64 {
 
         addw, subw,
 
-        /* less-than, less-than unsigned */
-        lt, ltu,
+        /* comparisons */
+        eq, ne, lt, ge, ltu, geu,
 
         /* bitwise */
         bitwise_xor, bitwise_or, bitwise_and,
