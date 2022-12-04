@@ -81,6 +81,7 @@ namespace arch::rv64 {
         c_nop      = 0b0000001,
         c_li       = 0b0001001,
         c_addi16sp = 0b0001101,
+        c_j        = 0b0010101,
         c_beqz     = 0b0011001,
         c_bnez     = 0b0011101,
 

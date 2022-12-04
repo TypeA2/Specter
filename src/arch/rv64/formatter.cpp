@@ -152,6 +152,11 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_j: {
+                fmt::print(os, "c.j {:x} <{:+x}>", _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
+                break;
+            }
+
             case opc::c_beqz: {
                 fmt::print(os, "c.beqz {}, {:x} <{:+x}>", _dec.rs1(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
                 break;

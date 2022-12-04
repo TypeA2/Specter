@@ -137,6 +137,24 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_j: {
+                _type = instr_type::J;
+                _opcode = opc::jal;
+                _rd = reg::zero;
+
+                uint32_t imm = (_instr >> 2) & 0b1110; /* 3:1 */
+                imm |= (_instr >> 7) & 0b000000010000; /* 4 */
+                imm |= (_instr << 3) & 0b000000100000; /* 5 */
+                imm |= (_instr >> 1) & 0b000001000000; /* 6 */
+                imm |= (_instr << 1) & 0b000010000000; /* 7 */
+                imm |= (_instr >> 1) & 0b001100000000; /* 9:8 */
+                imm |= (_instr << 2) & 0b010000000000; /* 10 */
+                imm |= (_instr >> 1) & 0b100000000000; /* 11 */
+
+                _imm = sign_extend<12>(imm);
+                break;
+            }
+
             case opc::c_beqz:
             case opc::c_bnez: {
                 _type = instr_type::B;
