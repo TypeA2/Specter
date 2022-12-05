@@ -70,15 +70,15 @@ namespace arch::rv64 {
                 break;
 
             case alu_op::sll:
-                _res = _a << _b;
+                _res = _a << (_b & 0b111111);
                 break;
 
             case alu_op::srl:
-                _res = _a >> _b;
+                _res = _a >> (_b & 0b111111);
                 break;
 
             case alu_op::sra:
-                _res = int64_t(_a) >> _b;
+                _res = int64_t(_a) >> (_b & 0b111111);
                 break;
         }
     }

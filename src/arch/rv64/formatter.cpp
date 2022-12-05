@@ -153,6 +153,26 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_srli: {
+                switch ((instr >> 10) & 0b11) {
+                    case 0b00: fmt::print(os, "c.srli {}, {}", _dec.rd(), _dec.imm() & 0b111111); break;
+                    case 0b01: fmt::print(os, "c.srai {}, {}", _dec.rd(), _dec.imm() & 0b111111); break;
+                    case 0b10: fmt::print(os, "c.andi {}, {}", _dec.rd(), int64_t(_dec.imm())); break;
+                    case 0b11: {
+                        if (instr & (1 << 12)) {
+                            switch ((instr >> 5) & 0b11) {
+                                case 0b00: fmt::print(os, "c.subw {}, {}", _dec.rd(), _dec.rs2()); break;
+                                case 0b01: fmt::print(os, "c.addw {}, {}", _dec.rd(), _dec.rs2()); break;
+                                default: throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed::c_srli::reserved");
+                            }
+                        }
+                        break;
+                    }
+                    default: throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed::c_srli");
+                }
+                break;
+            }
+
             case opc::c_j: {
                 fmt::print(os, "c.j {:x} <{:+x}>", _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
                 break;

@@ -1,0 +1,28 @@
+[execution]
+executable = "c.addw.rv64"
+
+[regfile.init]
+t0 = 1234
+t1 = 5678
+t2 = -42
+t3 = 0xf0101010
+
+# 0xf0101010
+t4 = -4027584528
+
+a0 = 42
+a7 = 93
+
+[testing]
+retval = 42
+depends = [ "ecall", "addw", "c.mv" ]
+
+[testing.regfile.post]
+s0 = 6912
+s1 = 1192
+s2 = -84
+
+# 0xe0202020
+s3 = -534765536
+
+s4 = 0x1fdfdfe0

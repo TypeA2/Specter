@@ -133,7 +133,12 @@ namespace arch::rv64 {
             }
 
             case opc::c_addi16sp: {
-                _decode_addi16sp();
+                _decode_c_addi16sp();
+                break;
+            }
+
+            case opc::c_srli: {
+                _decode_c_srli();
                 break;
             }
 
@@ -311,8 +316,8 @@ namespace arch::rv64 {
                         switch (_imm >> 10) {
                             case 0b00: _op = alu_op::srl; break; /* srli */
                             case 0b01: _op = alu_op::sra; break; /* srai */
+                            default: throw illegal_instruction(_pc, _instr, "srli/srai");
                         }
-                        _imm &= 0b111111;
                         break;
                     }
                 }
@@ -422,7 +427,7 @@ namespace arch::rv64 {
         }
     }
 
-    void decoder::_decode_addi16sp() {
+    void decoder::_decode_c_addi16sp() {
         _rd = static_cast<reg>((_instr >> 7) & REG_MASK);
 
         if (_rd == reg::sp) {
@@ -447,6 +452,74 @@ namespace arch::rv64 {
             _op = alu_op::forward_a;
 
             _imm = sign_extend<18>(((_instr << 5) & 0x20000) | ((_instr << 10) & 0x1f000));
+        }
+    }
+
+    void decoder::_decode_c_srli() {
+        _rs1 = static_cast<reg>(8 + ((_instr >> 7) & 0b111));
+        _rd = _rs1;
+
+        switch ((_instr >> 10) & 0b11) {
+            case 0b00:   /* c.srli */
+            case 0b01: { /* c.srai */
+                _type = instr_type::I;
+                _opcode = opc::addi;
+                _funct = 0b101;
+                _op = ((_instr >> 10) & 0b11) ? alu_op::sra : alu_op::srl;
+                _imm = ((_instr >> 2) & 0b11111) | ((_instr >> 7) & 0b100000);
+                break;
+            }
+
+            case 0b10: { /* c.andi */
+                _type = instr_type::I;
+                _opcode = opc::addi;
+                _funct = 0b111;
+                _op = alu_op::bitwise_and;
+                _imm = sign_extend<6>(((_instr >> 2) & 0b11111) | ((_instr >> 7) & 0b100000));
+                break;
+            }
+
+            case 0b11: {
+                _rs2 = static_cast<reg>(8 + ((_instr >> 2) & 0b111));
+                if (_instr & (1 << 12)) {
+                    /* c.subw, c.addw */
+                    switch ((_instr >> 5) & 0b11) {
+                        case 0b00:   /* c.subw */
+                        case 0b01: { /* c.addw */
+                            _type = instr_type::R;
+                            _opcode = opc::addw;
+                            _rd = static_cast<reg>(8 + ((_instr >> 7) & 0b111));
+                            _rs1 = _rd;
+                            _rs2 = static_cast<reg>(8 + ((_instr >> 2) & 0b111));
+                            _funct = ((_instr >> 5) & 0b11) ? 0 : (1 << 8);
+                            _op = _funct ? alu_op::subw : alu_op::addw;
+                            break;
+                        }
+
+                        default: throw illegal_compressed_instruction(_pc, _instr, "c.subw/c.addw reserved");
+                    }
+                } else {
+                    /* c.sub, c.xor, c.or, c.and */
+                    throw illegal_compressed_instruction(_pc, _instr, "c.sub/c.xor/c.or/c.and");
+                    switch ((_instr >> 5) & 0b11) {
+                        case 0b00: { /* c.sub */
+                            break;
+                        }
+
+                        case 0b01: { /* c.xor */
+                            break;
+                        }
+
+                        case 0b10: { /* c.or */
+                            break;
+                        }
+
+                        case 0b11: { /* c.and */
+                            break;
+                        }
+                    }
+                }
+            }
         }
     }
 

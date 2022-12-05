@@ -1,0 +1,38 @@
+[execution]
+executable = "c.subw.rv64"
+
+[regfile.init]
+t0 = 5678
+t1 = 1234
+
+t2 = -42
+
+t3 = 0xf0101010
+
+# 0xf0101010
+t4 = -4027584528
+
+t5 = 0x7fc0ffee
+t6 = -2143354862
+
+a3 = 0
+
+s3 = -1
+
+a0 = 42
+a7 = 93
+
+[testing]
+retval = 42
+depends = [ "ecall", "addw", "c.mv" ]
+
+[testing.regfile.post]
+s0 = 4444
+s1 = -4444
+s2 = 5720
+s3 = 0
+s4 = 0x1fdfdfe0
+# 0xe0202020
+s5 = -534765536
+s6 = -2143354862
+s7 = 0x7fc0ffee

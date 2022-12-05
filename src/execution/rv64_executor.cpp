@@ -275,7 +275,7 @@ int rv64_executor::run() {
             cycles += 1;
             instructions += 1;
 
-            if (_verbose || !_testmode) {
+            if (_verbose) {
                 _fmt.instr(std::cerr) << '\n';
             }
         }

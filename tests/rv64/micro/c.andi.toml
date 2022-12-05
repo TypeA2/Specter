@@ -1,0 +1,24 @@
+[execution]
+executable = "c.andi.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+# 0xa5a5a5a5a5a5a5a5
+a1 = -6510615555426900571
+a2 = -6510615555426900571
+a3 = -6510615555426900571
+a4 = -6510615555426900571
+
+t3 = -42
+
+[testing]
+retval = 42
+depends = [ "ecall", "andi" ]
+
+[testing.regfile.post]
+a1 = -6510615555426900571
+a2 = -6510615555426900576
+a3 = 4
+a4 = 0

@@ -191,25 +191,25 @@ int main(int argc, char** argv) {
 
     auto auto_si = [](double n) -> std::string {
         if (n < 1e3) {
-            return fmt::format("{}", std::round(n));
+            return fmt::format("{:.4}", n);
         } else if (n < 1e6) {
-            return fmt::format("{}k", std::round(n / 1e3));
+            return fmt::format("{:.4}k", n / 1e3);
         } else if (n < 1e9) {
-            return fmt::format("{}M", std::round(n / 1e6));
+            return fmt::format("{:.4}M", n / 1e6);
         } else {
-            return fmt::format("{}G", std::round(n / 1e9));
+            return fmt::format("{:.4}G", n / 1e9);
         }
     };
 
-    auto auto_bytes = [](double n) -> std::string {
+    auto auto_bytes = [](uint64_t n) -> std::string {
         if (n < 1024) {
-            return fmt::format("{} bytes", std::round(n));
+            return fmt::format("{} bytes", n);
         } else if (n < (1024 * 1024)) {
-            return fmt::format("{:.4}KiB", std::round(n / 1024.));
+            return fmt::format("{:.4}KiB", n / 1024.);
         } else if (n < (1024 * 1024 * 1024)) {
-            return fmt::format("{:.4}MiB", std::round(n / (1024. * 1024)));
+            return fmt::format("{:.4}MiB", n / (1024. * 1024));
         } else {
-            return fmt::format("{:.4}GiB", std::round(n / (1024. * 1024 * 1024)));
+            return fmt::format("{:.4}GiB", n / (1024. * 1024 * 1024));
         }
     };
 

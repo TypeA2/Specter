@@ -1,0 +1,26 @@
+[execution]
+executable = "c.srai.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+t0 = 1
+# >32-bit
+t1 = 0x7c0ffeedead
+# -0x7fa
+t2 = -2042
+
+[testing]
+retval = 42
+depends = [ "ecall", "c.mv", "srai" ]
+
+[testing.regfile.post]
+s0 = 0
+s1 = 0
+s2 = 0x1f03ffbb7a
+s3 = 0x1f
+s4 = 0
+s5 = -1
+s6 = -1
+s7 = -32
