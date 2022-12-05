@@ -6,7 +6,7 @@
 #include <span>
 #include <limits>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace arch {
     template <size_t from, std::unsigned_integral T = uint64_t, std::unsigned_integral U = uint64_t>

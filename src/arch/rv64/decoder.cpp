@@ -375,6 +375,9 @@ namespace arch::rv64 {
                 switch (_funct) {
                     case 0b0000000000: _op = alu_op::add; break; /* add */
                     case 0b0100000000: _op = alu_op::sub; break; /* sub */
+                    case 0b0000000100: _op = alu_op::bitwise_xor; break; /* xor */
+                    case 0b0000000110: _op = alu_op::bitwise_or; break;  /* or */
+                    case 0b0000000111: _op = alu_op::bitwise_and; break; /* and */
                     default: throw illegal_instruction(_pc, _instr, "add");
                 }
                 break;
@@ -481,6 +484,8 @@ namespace arch::rv64 {
 
             case 0b11: {
                 _rs2 = static_cast<reg>(8 + ((_instr >> 2) & 0b111));
+                _rd = static_cast<reg>(8 + ((_instr >> 7) & 0b111));
+                _rs1 = _rd;
                 if (_instr & (1 << 12)) {
                     /* c.subw, c.addw */
                     switch ((_instr >> 5) & 0b11) {
@@ -488,9 +493,6 @@ namespace arch::rv64 {
                         case 0b01: { /* c.addw */
                             _type = instr_type::R;
                             _opcode = opc::addw;
-                            _rd = static_cast<reg>(8 + ((_instr >> 7) & 0b111));
-                            _rs1 = _rd;
-                            _rs2 = static_cast<reg>(8 + ((_instr >> 2) & 0b111));
                             _funct = ((_instr >> 5) & 0b11) ? 0 : (1 << 8);
                             _op = _funct ? alu_op::subw : alu_op::addw;
                             break;
@@ -500,21 +502,30 @@ namespace arch::rv64 {
                     }
                 } else {
                     /* c.sub, c.xor, c.or, c.and */
-                    throw illegal_compressed_instruction(_pc, _instr, "c.sub/c.xor/c.or/c.and");
+                    _type = instr_type::R;
+                    _opcode = opc::add;
                     switch ((_instr >> 5) & 0b11) {
                         case 0b00: { /* c.sub */
+                            _funct = 0b0100000000;
+                            _op = alu_op::sub;
                             break;
                         }
 
                         case 0b01: { /* c.xor */
+                            _funct = 0b100;
+                            _op = alu_op::bitwise_xor;
                             break;
                         }
 
                         case 0b10: { /* c.or */
+                            _funct = 0b110;
+                            _op = alu_op::bitwise_or;
                             break;
                         }
 
                         case 0b11: { /* c.and */
+                            _funct = 0b111;
+                            _op = alu_op::bitwise_and;
                             break;
                         }
                     }

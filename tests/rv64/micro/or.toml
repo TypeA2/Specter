@@ -1,0 +1,27 @@
+[execution]
+executable = "or.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+# 0xa5a5a5a5a5a5a5a5
+s0 = -6510615555426900571
+
+s1 = -1
+s2 = 0x777fff
+s3 = -111222333444
+s4 = 0
+
+t3 = -42
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+t0 = -1
+t1 = -6510615555421503489
+# 0xa5a5a5a400a185a4
+t2 = -104158855171
+t3 = -6510615555426900571

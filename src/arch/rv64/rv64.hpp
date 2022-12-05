@@ -7,7 +7,7 @@
 #include <charconv>
 #include <type_traits>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <magic_enum.hpp>
 
 namespace arch::rv64 {

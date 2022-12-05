@@ -1,6 +1,5 @@
 #include "arch.hpp"
 
-#include <fmt/core.h>
 #include <fmt/ranges.h>
 
 namespace arch {

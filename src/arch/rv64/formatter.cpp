@@ -73,6 +73,9 @@ namespace arch::rv64 {
                 switch (_dec.funct()) {
                     case 0b0000000000: return "add";
                     case 0b0100000000: return "sub";
+                    case 0b0000000100: return "xor";
+                    case 0b0000000110: return "or";
+                    case 0b0000000111: return "and";
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::add");
                 }
             }
@@ -164,6 +167,13 @@ namespace arch::rv64 {
                                 case 0b00: fmt::print(os, "c.subw {}, {}", _dec.rd(), _dec.rs2()); break;
                                 case 0b01: fmt::print(os, "c.addw {}, {}", _dec.rd(), _dec.rs2()); break;
                                 default: throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed::c_srli::reserved");
+                            }
+                        } else {
+                            switch ((instr >> 5) & 0b11) {
+                                case 0b00: fmt::print(os, "c.sub {}, {}", _dec.rd(), _dec.rs2()); break;
+                                case 0b01: fmt::print(os, "c.xor {}, {}", _dec.rd(), _dec.rs2()); break;
+                                case 0b10: fmt::print(os, "c.or {}, {}", _dec.rd(), _dec.rs2()); break;
+                                case 0b11: fmt::print(os, "c.and {}, {}", _dec.rd(), _dec.rs2()); break;
                             }
                         }
                         break;
