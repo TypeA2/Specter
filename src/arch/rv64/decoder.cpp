@@ -77,12 +77,15 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_lw:
             case opc::c_ld: {
                 _type = instr_type::I;
                 _opcode = opc::load;
                 _rd = static_cast<reg>(8 + ((_instr >> 2) & 0b111));
                 _rs1 = static_cast<reg>(8 + ((_instr >> 7) & 0b111));
-                _funct = 0b011;
+
+                /* This is kind of cursed */
+                _funct = (_instr >> 13) & 0b111;
                 _op = alu_op::add;
                 _imm = ((_instr >> 7) & 0b111000) | ((_instr << 1) & 0b11000000);
                 break;
@@ -299,6 +302,8 @@ namespace arch::rv64 {
                     case 0b110: /* lwu */
                         _op = alu_op::add;
                         break;
+
+                    default: throw illegal_instruction(_pc, _instr, "load");
                 }
                 break;
             }
@@ -327,6 +332,16 @@ namespace arch::rv64 {
             case opc::addiw: {
                 switch (_funct) {
                     case 0b000: _op = alu_op::addw; break; /* addiw */
+                    case 0b001: _op = alu_op::sllw; break; /* slliw */
+                    case 0b101: {
+                        switch (_imm >> 10) {
+                            case 0b00: _op = alu_op::srlw; break; /* srliw */
+                            case 0b01: _op = alu_op::sraw; break; /* srliw */
+                            default: throw illegal_instruction(_pc, _instr, "srliw/sraiw");
+                        }
+                        break;
+                    }
+                    default: throw illegal_instruction(_pc, _instr, "addiw");
                 }
                 break;
             }

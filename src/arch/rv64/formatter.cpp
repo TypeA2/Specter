@@ -83,6 +83,14 @@ namespace arch::rv64 {
             case opc::addiw: {
                 switch (_dec.funct()) {
                     case 0b000: return "addiw";
+                    case 0b001: return "slliw";
+                    case 0b101: {
+                        switch (_dec.imm() >> 10) {
+                            case 0b00: return "srliw";
+                            case 0b01: return "sraiw";
+                            default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::srliw/sraiw");
+                        }
+                    }
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addiw");
                 }
             }
@@ -110,6 +118,11 @@ namespace arch::rv64 {
         switch (static_cast<opc>(((instr >> 11) & 0b11100) | (instr & 0b11))) {
             case opc::c_addi4spn: {
                 fmt::print(os, "c.addi4spn {}, sp, {}", _dec.rd(), _dec.imm());
+                break;
+            }
+
+            case opc::c_lw: {
+                fmt::print(os, "c.lw {}, {}({})", _dec.rd(), _dec.imm(), _dec.rs1());
                 break;
             }
 

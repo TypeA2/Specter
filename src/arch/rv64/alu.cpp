@@ -26,11 +26,11 @@ namespace arch::rv64 {
                 break;
 
             case alu_op::addw:
-                _res = sign_extend((_a + _b) & 0xffffffff, 32);
+                _res = sign_extend<32>((_a + _b) & 0xffffffff);
                 break;
 
             case alu_op::subw:
-                _res = sign_extend(uint64_t(int64_t(_a) - int64_t(_b)) & 0xffffffff, 32);
+                _res = sign_extend<32>(uint64_t(int64_t(_a) - int64_t(_b)) & 0xffffffff);
                 break;
 
             case alu_op::eq:
@@ -79,6 +79,18 @@ namespace arch::rv64 {
 
             case alu_op::sra:
                 _res = int64_t(_a) >> (_b & 0b111111);
+                break;
+
+            case alu_op::sllw:
+                _res = sign_extend<32>((_a << (_b & 0b11111)) & 0xffffffff);
+                break;
+
+            case alu_op::srlw:
+                _res = sign_extend<32>((_a >> (_b & 0b111111)) & 0xffffffff);
+                break;
+
+            case alu_op::sraw:
+                _res = sign_extend<32>(static_cast<uint64_t>(int64_t(_a) >> (_b & 0b111111)) & 0xffffffff);
                 break;
         }
     }

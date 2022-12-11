@@ -1,0 +1,21 @@
+[execution]
+executable = "c.lw.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+s1 = 0x20000
+
+[testing]
+retval = 42
+depends = [ "ecall", "c.mv", "load" ]
+
+[testing.regfile.post]
+t0 = 15
+t1 = -1234
+t2 = 0x10000
+t3 = 0x20008
+# 0xdeadbeef
+t4 = -559038737
+t5 = 0x126d126d

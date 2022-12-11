@@ -1,0 +1,26 @@
+[execution]
+executable = "slliw.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+t0 = 1
+# >32-bit
+t1 = 0x7c0ffeedead
+# -0x7fa
+t2 = -2042
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = 2 # 1 << 1
+s1 = -2147483648 # 1 << 31
+s2 = -1122643
+s3 = -71849152
+s4 = -805306368
+s5 = -1421869056
+s6 = -33456128
+s7 = 50331648

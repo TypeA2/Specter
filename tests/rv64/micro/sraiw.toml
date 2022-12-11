@@ -1,0 +1,27 @@
+[execution]
+executable = "sraiw.rv64"
+
+[regfile.init]
+a0 = 42
+a7 = 93
+
+t0 = 1
+# >32-bit
+t1 = 0x7c0ffeedead
+# -0x7fa
+t2 = -2042
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = 0
+s1 = 0
+s2 = -1122643
+s3 = 0x3ffbb7a
+s4 = 0x7c0f
+s5 = 0x1f03ff
+s6 = -1
+s7 = -1
+s8 = -32
