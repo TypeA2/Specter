@@ -108,17 +108,18 @@ namespace arch::rv64 {
         /* Use ALU as a muxer */
         forward_a, forward_b,
 
-        add, sub,
+        /* Arithmetics*/
+        add, sub, div, divu, mul,
 
         addw, subw,
 
-        /* comparisons */
+        /* Comparisons */
         eq, ne, lt, ge, ltu, geu,
 
-        /* bitwise */
+        /* Bitwise */
         bitwise_xor, bitwise_or, bitwise_and,
 
-        /* shifts */
+        /* Shifts */
         sll, srl, sra,
 
         sllw, srlw, sraw,

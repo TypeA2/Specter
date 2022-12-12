@@ -76,6 +76,11 @@ namespace arch::rv64 {
                     case 0b0000000100: return "xor";
                     case 0b0000000110: return "or";
                     case 0b0000000111: return "and";
+
+                    /* RV64M */
+                    case 0b0000001000: return "mul";
+                    case 0b0000001100: return "div";
+                    case 0b0000001101: return "divu";
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::add");
                 }
             }

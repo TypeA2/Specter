@@ -25,6 +25,18 @@ namespace arch::rv64 {
                 _res = int64_t(_a) - int64_t(_b);
                 break;
 
+            case alu_op::div:
+                _res = int64_t(_a) / int64_t(_b);
+                break;
+
+            case alu_op::divu:
+                _res = _a / _b;
+                break;
+
+            case alu_op::mul:
+                _res = int64_t(_a) * int64_t(_b);
+                break;
+
             case alu_op::addw:
                 _res = sign_extend<32>((_a + _b) & 0xffffffff);
                 break;

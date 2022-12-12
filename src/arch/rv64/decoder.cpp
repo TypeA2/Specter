@@ -393,6 +393,9 @@ namespace arch::rv64 {
                     case 0b0000000100: _op = alu_op::bitwise_xor; break; /* xor */
                     case 0b0000000110: _op = alu_op::bitwise_or; break;  /* or */
                     case 0b0000000111: _op = alu_op::bitwise_and; break; /* and */
+                    case 0b0000001000: _op = alu_op::mul; break;  /* mul */
+                    case 0b0000001100: _op = alu_op::div; break;  /* div */
+                    case 0b0000001101: _op = alu_op::divu; break; /* div */
                     default: throw illegal_instruction(_pc, _instr, "add");
                 }
                 break;

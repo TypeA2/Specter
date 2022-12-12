@@ -1,0 +1,25 @@
+[execution]
+executable = "divu.rv64"
+
+[regfile.init]
+t0 = 1234
+t1 = 5678
+t2 = -42
+t3 = 0x1afcdf0101010
+
+# 0xf0101010
+t4 = -4027584528
+
+a0 = 42
+a7 = 93
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = 4
+s1 = 0x351bcc8d11d756
+s2 = 1
+s3 = 0x1377ed3f36
+s4 = 38853

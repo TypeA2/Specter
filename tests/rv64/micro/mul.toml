@@ -1,0 +1,29 @@
+[execution]
+executable = "mul.rv64"
+
+[regfile.init]
+t0 = 1234
+t1 = 5678
+t2 = -42
+t3 = 0xf0101010
+
+# 0xf0101010
+t4 = -4027584528
+
+a0 = 42
+a7 = 93
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = 7006652
+s1 = -51828
+s2 = 1764
+
+# 0xe11e1f2003020100
+s3 = -2225306943524568832
+
+# -0xe11e1f2003020100 masked
+s4 = 0x1ee1e0dffcfdff00
