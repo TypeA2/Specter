@@ -36,12 +36,15 @@ class invalid_write : public illegal_access {
 /* Interface similar to rv64-emu */
 class memory {
     std::endian _byte_order;
+    std::string _tag;
     public:
     virtual ~memory() = default;
 
     explicit memory(std::endian byte_order);
+    memory(std::endian byte_order, std::string_view tag);
 
     [[nodiscard]] std::endian byte_order() const;
+    [[nodiscard]] std::string_view tag() const;
 
     [[nodiscard]] virtual bool contains(uintptr_t addr) const = 0;
 
@@ -54,4 +57,10 @@ class memory {
     virtual memory& write_half(uintptr_t addr, uint16_t val) = 0;
     virtual memory& write_word(uintptr_t addr, uint32_t val) = 0;
     virtual memory& write_dword(uintptr_t addr, uint64_t val) = 0;
+
+    virtual std::ostream& print_state(std::ostream& os) const;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const memory& mem) {
+    return mem.print_state(os);
+}

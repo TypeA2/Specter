@@ -3,28 +3,18 @@
 #include "memory.hpp"
 
 #include <algorithm>
+#include <vector>
 
-class memory_backed_memory : public memory {
-    public:
-    enum class permissions : uint8_t {
-        X = PF_X,
-        W = PF_W,
-        R = PF_R,
-    };
-
+class growable_memory : public memory {
     protected:
-    permissions perms;
     uintptr_t base_addr;
-    size_t size;
-    std::align_val_t alignment;
+    std::vector<uint8_t> data;
 
-    aligned_unique_ptr<uint8_t[]> data;
-
-    void access_check(uintptr_t addr, size_t size, permissions perms);
+    void access_check(uintptr_t addr, size_t size);
 
     template <std::unsigned_integral T>
     T read_data(uintptr_t addr) {
-        access_check(addr, sizeof(T), permissions::R);
+        access_check(addr, sizeof(T));
 
         if constexpr (sizeof(T) == 1) {
             return static_cast<T>(data[addr - base_addr]);
@@ -42,7 +32,7 @@ class memory_backed_memory : public memory {
 
     template <std::unsigned_integral T>
     memory& write_data(uintptr_t addr, T val) {
-        access_check(addr, sizeof(T), permissions::W);
+        access_check(addr, sizeof(T));
 
         if constexpr (sizeof(T) == 1) {
             data[addr - base_addr] = val;
@@ -57,15 +47,18 @@ class memory_backed_memory : public memory {
     }
 
     public:
-    memory_backed_memory(std::endian endian, permissions perms,
-        uintptr_t vaddr, size_t memsize, std::align_val_t alignment, std::span<uint8_t> data = {},
-        std::string_view tag = "unknown");
+    growable_memory(std::endian endian, uintptr_t vaddr, std::string_view tag = "unknown");
 
-    memory_backed_memory(const memory_backed_memory&) = delete;
-    memory_backed_memory& operator=(const memory_backed_memory&) = delete;
+    growable_memory(const growable_memory&) = delete;
+    growable_memory& operator=(const growable_memory&) = delete;
 
-    memory_backed_memory(memory_backed_memory&& other) noexcept = default;
-    memory_backed_memory& operator=(memory_backed_memory&& other) noexcept = default;
+    growable_memory(growable_memory&& other) noexcept = default;
+    growable_memory& operator=(growable_memory&& other) noexcept = default;
+
+    [[nodiscard]] uintptr_t base() const;
+    [[nodiscard]] size_t size() const;
+
+    void resize(size_t new_size);
 
     [[nodiscard]] bool contains(uintptr_t addr) const override;
 

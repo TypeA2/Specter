@@ -176,6 +176,24 @@ bool rv64_executor::_syscall(int& retval) {
             retval = _reg.read(rv64::reg::a0);
             return false;
 
+        case rv64::syscall::brk: {
+            uint64_t arg = _reg.read(rv64::reg::a0);
+            uint64_t res = 0;
+
+            // Request current break
+            res = _heap.base() + _heap.size();
+
+            if (arg > 0) {
+                _heap.resize(_heap.size() + (arg - _heap.base()));
+            }
+
+            _reg.write(rv64::reg::a0, res);
+            return true;
+        }
+
+        case rv64::syscall::mmap:
+            return _mmap();
+
         default: {
             std::vector<uint64_t> args {
                 _reg.read(rv64::reg::a0),
@@ -191,6 +209,16 @@ bool rv64_executor::_syscall(int& retval) {
     }
 
     return true;
+}
+
+bool rv64_executor::_mmap() {
+    uint64_t addr   = _reg.read(rv64::reg::a0);
+    uint64_t length = _reg.read(rv64::reg::a1);
+    uint64_t prot   = _reg.read(rv64::reg::a2);
+    uint64_t flags  = _reg.read(rv64::reg::a3);
+    uint64_t fd     = _reg.read(rv64::reg::a4);
+    uint64_t offset = _reg.read(rv64::reg::a5);
+    return false;
 }
 
 void rv64_executor::next_instr() {
@@ -245,7 +273,8 @@ bool rv64_executor::validate_registers(std::shared_ptr<cpptoml::table> post, std
 
 rv64_executor::rv64_executor(elf_file& elf, virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config)
     : executor(elf, mem, entry, sp)
-    , _config { config }, _fmt { _dec, _reg } {
+    , _config { config }, _fmt { _dec, _reg }
+    , _heap { dynamic_cast<growable_memory&>(mem.get_first(virtual_memory::role::heap)) } {
     if (config) {
         init_registers(_config->get_table_qualified("regfile.init"));
 
@@ -322,6 +351,7 @@ int rv64_executor::run() {
 std::ostream& rv64_executor::print_state(std::ostream& os) const {
     if (_verbose || !_testmode) {
         fmt::print(os, "RISC-V 64-bit executor, entrypoint = {:#08x}, pc = {:#08x}, sp = {:#08x}\n", entry, pc, sp);
+        os << mem;
         _fmt.regs(os);
     }
 

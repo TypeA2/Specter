@@ -2,6 +2,8 @@
 
 #include <bit>
 
+#include <fmt/ostream.h>
+
 #include <magic_enum.hpp>
 
 using namespace magic_enum::bitwise_operators;
@@ -48,8 +50,8 @@ void memory_backed_memory::access_check(uintptr_t addr, size_t size, permissions
 
 memory_backed_memory::memory_backed_memory(
     std::endian endian, permissions perms, uintptr_t vaddr, size_t memsize,
-    std::align_val_t alignment, std::span<uint8_t> data)
-    : memory(endian)
+    std::align_val_t alignment, std::span<uint8_t> data, std::string_view tag)
+    : memory(endian, tag)
     , perms { perms }, base_addr { vaddr }, size { memsize }, alignment { alignment }
     , data(new (alignment) uint8_t[size], alignment) {
     
@@ -92,4 +94,11 @@ memory& memory_backed_memory::write_word(uintptr_t addr, uint32_t val) {
 
 memory& memory_backed_memory::write_dword(uintptr_t addr, uint64_t val) {
     return write_data<uint64_t>(addr, val);
+}
+
+std::ostream& memory_backed_memory::print_state(std::ostream& os) const {
+    fmt::print(os, "[{} memory-backed memory, tag={}, base={:#x}, size={}, alignment={}]",
+        (byte_order() == std::endian::little) ? "little-endian" : "big-endian",
+        tag(), base_addr, size, alignment);
+    return os;
 }

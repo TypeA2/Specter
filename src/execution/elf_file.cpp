@@ -8,7 +8,10 @@
 #include <unistd.h>
 #include <sys/resource.h>
 
+#include <fmt/ostream.h>
+
 #include <memory/memory_backed_memory.hpp>
+#include <memory/growable_memory.hpp>
 
 #include <execution/rv64_executor.hpp>
 
@@ -132,7 +135,7 @@ uintptr_t elf_file::stack_base() const {
 }
 
 uintptr_t elf_file::stack_limit() const {
-    return stack_base() - stack_size() + 1;
+    return stack_base() - stack_size();
 }
 
 size_t elf_file::stack_size() const {
@@ -153,25 +156,47 @@ size_t elf_file::page_size() const {
 }
 
 virtual_memory elf_file::load() {
-    virtual_memory res { (byte_order() == elf::endian::lsb) ? std::endian::little : std::endian::big };
+    virtual_memory res {
+        (byte_order() == elf::endian::lsb) ? std::endian::little : std::endian::big,
+        relative(_path).string()
+    };
+
+    // for (auto& s : sections()) {
+    //    fmt::print(std::cerr, "{} @ {:#x}, {}, {}\n", str(s.sh_name), s.sh_addr, s.sh_offset, s.sh_size);
+    // }
 
     /* _SC_PAGESIZE is guaranteed to be >0 */
-    res.add<memory_backed_memory>(
+    res.add<virtual_memory::role::stack, memory_backed_memory>(
         std::endian::little, memory_backed_memory::permissions::R | memory_backed_memory::permissions::W,
-        stack_limit(), stack_size(), std::align_val_t { page_size() }
+        stack_limit(), stack_size(), std::align_val_t { page_size() }, std::span<uint8_t>{},
+        "stack"
     );
+
+    uintptr_t heap_start = 0;
 
     for (Elf64_Phdr& program : programs()) {
         if (program.p_type == PT_LOAD) {
             /* Only PT_LOAD needs to actually be mapped */
-            res.add<memory_backed_memory>(
+            auto mem = std::make_unique<memory_backed_memory>(
                 std::endian::little,
                 static_cast<memory_backed_memory::permissions>(program.p_flags),
                 program.p_vaddr, program.p_memsz, std::align_val_t { program.p_align },
-                std::span<uint8_t>(_mapping.get_at<uint8_t>(program.p_offset), program.p_filesz)
+                std::span<uint8_t>(_mapping.get_at<uint8_t>(program.p_offset), program.p_filesz),
+                "PT_LOAD"
             );
+
+            res.add((program.p_flags & PF_X) ? virtual_memory::role::text : virtual_memory::role::generic, std::move(mem));
+
+            heap_start = std::max(heap_start, program.p_vaddr + program.p_memsz);
+        } else if (program.p_type == PT_INTERP) {
+            // fmt::print(std::cerr, "Interpreter: {}\n", _mapping.get_at<char>(program.p_offset));
         }
     }
+
+    // Pad to 16
+    heap_start = (heap_start + 15) & uintptr_t(-16);
+
+    res.add<virtual_memory::role::heap, growable_memory>(std::endian::little, heap_start, "heap");
 
     return res;
 }

@@ -1,7 +1,26 @@
 #include "virtual_memory.hpp"
 
+#include <fmt/ostream.h>
+
+#include <magic_enum.hpp>
+
+using namespace magic_enum::ostream_operators;
+
+virtual_memory::virtual_memory(std::endian endian, std::string_view name)
+    : memory(endian, name), _read { 0 }, _written { 0 } {
+
+}
+
+void virtual_memory::add(role role, std::unique_ptr<memory> mem) {
+    if (mem->byte_order() != this->byte_order()) {
+        throw std::invalid_argument("endianness mismatch");
+    }
+
+    _bank.insert({role, std::move(mem)});
+}
+
 memory& virtual_memory::get(uintptr_t addr, size_t size, operation op) const {
-    for (auto& mem : _bank) {
+    for (auto& [k, mem] : _bank) {
         if (mem->contains(addr)) {
             return *mem;
         }
@@ -17,17 +36,25 @@ memory& virtual_memory::get(uintptr_t addr, size_t size, operation op) const {
     }
 }
 
-virtual_memory::virtual_memory(std::endian endian)
-    : memory(endian), _read { 0 }, _written { 0 } {
+std::vector<std::reference_wrapper<memory>> virtual_memory::get(role role) const {
+    auto range = _bank.equal_range(role);
+    std::vector<std::reference_wrapper<memory>> res;
 
-}
-
-void virtual_memory::add(std::unique_ptr<memory> mem) {
-    if (mem->byte_order() != this->byte_order()) {
-        throw std::invalid_argument("endianness mismatch");
+    for (auto it = range.first; it != range.second; ++it) {
+        res.push_back(*it->second);
     }
 
-    _bank.emplace_back(std::move(mem));
+    return res;
+}
+
+memory& virtual_memory::get_first(role role) const {
+    auto range = _bank.equal_range(role);
+
+    return *range.first->second;
+}
+
+size_t virtual_memory::count(role role) const {
+    return _bank.count(role);
 }
 
 size_t virtual_memory::bytes_read() const {
@@ -39,7 +66,7 @@ size_t virtual_memory::bytes_written() const {
 }
 
 bool virtual_memory::contains(uintptr_t addr) const {
-    for (const auto& mem : _bank) {
+    for (const auto& [k, mem] : _bank) {
         if (mem->contains(addr)) {
             return true;
         }
@@ -86,4 +113,16 @@ memory& virtual_memory::write_word(uintptr_t addr, uint32_t val) {
 memory& virtual_memory::write_dword(uintptr_t addr, uint64_t val) {
     _written += 8;
     return get(addr, 8, operation::write).write_dword(addr, val);
+}
+
+std::ostream& virtual_memory::print_state(std::ostream& os) const {
+    fmt::print(os, "[{} virtual memory for \"{}\", bank size={}, read={}, written={}]\n",
+        (byte_order() == std::endian::little) ? "little-endian" : "big-endian",
+        tag(), _bank.size(), _read, _written);
+
+    for (const auto& [k, mem] : _bank) {
+        fmt::print(os, "  {}: {}\n", magic_enum::enum_name(k), fmt::streamed(*mem));
+    }
+
+    return os;
 }

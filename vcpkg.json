@@ -5,6 +5,7 @@
         "cxxopts",
         "magic-enum",
         "fmt",
-        "cpptoml"
+        "cpptoml",
+        "range-v3"
     ]
 }

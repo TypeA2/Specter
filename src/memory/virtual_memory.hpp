@@ -3,22 +3,33 @@
 #include "memory.hpp"
 
 #include <vector>
+#include <map>
 #include <memory>
 #include <bit>
 
 class virtual_memory : public memory {
-    std::vector<std::unique_ptr<memory>> _bank;
+    public:
+    enum class role {
+        generic,
+        text,
+        stack,
+        heap,
+        mmap
+    };
+
+    enum class operation {
+        read, write, exec
+    };
+
+    using map_type = std::multimap<role, std::unique_ptr<memory>>;
+    private:
+    map_type _bank;
 
     size_t _read;
     size_t _written;
 
-    enum class operation {
-        read, write
-    };
-    [[nodiscard]] memory& get(uintptr_t addr, size_t size, operation op) const;
-
     public:
-    explicit virtual_memory(std::endian endian);
+    explicit virtual_memory(std::endian endian, std::string_view name = "unknown");
 
     virtual_memory(virtual_memory&& other) noexcept = default;
     virtual_memory& operator=(virtual_memory&& other) noexcept = default;
@@ -26,13 +37,18 @@ class virtual_memory : public memory {
     virtual_memory(const virtual_memory&) = delete;
     virtual_memory& operator=(const virtual_memory&) = delete;
 
-    void add(std::unique_ptr<memory> mem);
+    void add(role role, std::unique_ptr<memory> mem);
 
-    template <typename T, typename... Args>
+    template <role role, typename T, typename... Args>
     void add(Args&&... args) {
-        add(std::make_unique<T>(std::forward<Args>(args)...));
+        add(role, std::make_unique<T>(std::forward<Args>(args)...));
     }
 
+    [[nodiscard]] memory& get(uintptr_t addr, size_t size, operation op) const;
+    [[nodiscard]] std::vector<std::reference_wrapper<memory>> get(role role) const;
+    [[nodiscard]] memory& get_first(role role) const;
+
+    [[nodiscard]] size_t count(role role) const;
 
     [[nodiscard]] size_t bytes_read() const;
     [[nodiscard]] size_t bytes_written() const;
@@ -48,4 +64,6 @@ class virtual_memory : public memory {
     memory& write_half(uintptr_t addr, uint16_t val) override;
     memory& write_word(uintptr_t addr, uint32_t val) override;
     memory& write_dword(uintptr_t addr, uint64_t val) override;
+
+    std::ostream& print_state(std::ostream& os) const override;
 };

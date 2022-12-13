@@ -98,6 +98,8 @@ namespace arch::rv64 {
     /* https://github.com/bminor/glibc/blob/master/sysdeps/unix/sysv/linux/riscv/rv64/arch-syscall.h */
     enum class syscall : uint64_t {
         exit = 93,
+        brk = 214,
+        mmap = 222,
     };
 
     enum class alu_op {

@@ -8,6 +8,8 @@
 #include <arch/rv64/alu.hpp>
 #include <arch/rv64/formatter.hpp>
 
+#include <memory/growable_memory.hpp>
+
 #include <array>
 #include <concepts>
 #include <string_view>
@@ -29,6 +31,8 @@ class rv64_executor : public executor {
 
     uintptr_t _next_pc;
 
+    growable_memory& _heap;
+
     /* Fetch an instruction */
     void fetch();
 
@@ -43,6 +47,7 @@ class rv64_executor : public executor {
     bool _exec_b();
 
     bool _syscall(int& retval);
+    bool _mmap();
 
     /* Increment PC */
     void next_instr();

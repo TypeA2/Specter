@@ -4,6 +4,7 @@ add_library(
     "virtual_memory.hpp" "virtual_memory.cpp"
     "memory_backed_memory.hpp" "memory_backed_memory.cpp"
     "stack_memory.hpp" "stack_memory.cpp"
+    "growable_memory.hpp" "growable_memory.cpp"
 )
 
 target_max_warnings(TARGET specter_memory)
