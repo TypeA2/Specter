@@ -52,6 +52,9 @@ namespace arch {
 
     class invalid_syscall : public std::runtime_error {
         public:
+        template <typename... Args>
+        invalid_syscall(fmt::format_string<Args...> fmt, Args&&... args)
+            : std::runtime_error(fmt::format(fmt, std::forward<Args>(args)...)) { }
         invalid_syscall(uintptr_t addr, uint64_t id);
         invalid_syscall(uintptr_t addr, uint64_t id, std::span<uint64_t> args);
     };

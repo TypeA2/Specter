@@ -193,8 +193,8 @@ virtual_memory elf_file::load() {
         }
     }
 
-    // Pad to 16
-    heap_start = (heap_start + 15) & uintptr_t(-16);
+    // Pad to account for up to 1 MiB pages
+    heap_start = (heap_start + (1024*1024 - 1)) & uintptr_t(-(1024*1024));
 
     res.add<virtual_memory::role::heap, growable_memory>(std::endian::little, heap_start, "heap");
 

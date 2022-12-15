@@ -52,16 +52,24 @@ memory_backed_memory::memory_backed_memory(
     std::endian endian, permissions perms, uintptr_t vaddr, size_t memsize,
     std::align_val_t alignment, std::span<uint8_t> data, std::string_view tag)
     : memory(endian, tag)
-    , perms { perms }, base_addr { vaddr }, size { memsize }, alignment { alignment }
-    , data(new (alignment) uint8_t[size], alignment) {
+    , perms { perms }, base_addr { vaddr }, mapped_size { memsize }, alignment { alignment }
+    , data(new (alignment) uint8_t[mapped_size], alignment) {
     
     /* Copy supplied memory and pad with zeroes */
     std::ranges::copy(data, this->data.get());
-    std::fill_n(this->data.get() + data.size(), size - data.size(), 0);
+    std::fill_n(this->data.get() + data.size(), mapped_size - data.size(), 0);
+}
+
+uintptr_t memory_backed_memory::base() const {
+    return base_addr;
+}
+
+size_t memory_backed_memory::size() const {
+    return mapped_size;
 }
 
 bool memory_backed_memory::contains(uintptr_t addr) const {
-    return (addr >= base_addr) && (addr < (base_addr + size));
+    return (addr >= base_addr) && (addr < (base_addr + mapped_size));
 }
 
 uint8_t memory_backed_memory::read_byte(uintptr_t addr) {
@@ -99,6 +107,6 @@ memory& memory_backed_memory::write_dword(uintptr_t addr, uint64_t val) {
 std::ostream& memory_backed_memory::print_state(std::ostream& os) const {
     fmt::print(os, "[{} memory-backed memory, tag={}, base={:#x}, size={}, alignment={}]",
         (byte_order() == std::endian::little) ? "little-endian" : "big-endian",
-        tag(), base_addr, size, alignment);
+        tag(), base_addr, mapped_size, alignment);
     return os;
 }

@@ -9,11 +9,13 @@
 #include <arch/rv64/formatter.hpp>
 
 #include <memory/growable_memory.hpp>
+#include <memory/memory_backed_memory.hpp>
 
 #include <array>
 #include <concepts>
 #include <string_view>
 #include <charconv>
+#include <deque>
 
 #include <magic_enum.hpp>
 #include <cpptoml.h>
@@ -32,6 +34,21 @@ class rv64_executor : public executor {
     uintptr_t _next_pc;
 
     growable_memory& _heap;
+    memory_backed_memory& _stack;
+
+    static constexpr size_t page_size = 4096;
+
+    struct memory_hole {
+        uintptr_t start;
+        size_t end;
+
+        [[nodiscard]] size_t size() const { return end - start; }
+        [[nodiscard]] bool contains(size_t idx, size_t pages) const;
+    };
+
+    std::deque<memory_hole> _hole_list;
+
+    bool _allocate_pages(size_t idx, size_t count);
 
     /* Fetch an instruction */
     void fetch();
@@ -47,6 +64,7 @@ class rv64_executor : public executor {
     bool _exec_b();
 
     bool _syscall(int& retval);
+    bool _brk();
     bool _mmap();
 
     /* Increment PC */

@@ -11,6 +11,45 @@ using namespace magic_enum::ostream_operators;
 
 using namespace arch;
 
+bool rv64_executor::memory_hole::contains(size_t idx, size_t pages) const {
+    uintptr_t req_end = idx + pages;
+    return (idx >= start && idx < end) && (req_end >= start && req_end < end);
+}
+
+bool rv64_executor::_allocate_pages(size_t idx, size_t count) {
+    for (auto it = _hole_list.begin(); it != _hole_list.end(); ++it) {
+        auto& hole = *it;
+        if (hole.contains(idx, count)) {
+            /* Correct hole was found, split */
+            memory_hole before {
+                .start = hole.start,
+                .end = idx,
+            };
+
+            memory_hole after {
+                .start = idx + count,
+                .end = hole.end,
+            };
+
+            if (before.size() == 0 && after.size() != 0) {
+                hole = after;
+            } else if (before.size() != 0 && after.size() == 0) {
+                hole = before;
+            } else {
+                hole = before;
+
+                ++it;
+
+                _hole_list.insert(it, after);
+            }
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void rv64_executor::fetch() {
     uint32_t instr = mem.read_half(pc);
     if (rv64::decoder::compressed(instr)) {
@@ -176,20 +215,8 @@ bool rv64_executor::_syscall(int& retval) {
             retval = _reg.read(rv64::reg::a0);
             return false;
 
-        case rv64::syscall::brk: {
-            uint64_t arg = _reg.read(rv64::reg::a0);
-            uint64_t res = 0;
-
-            // Request current break
-            res = _heap.base() + _heap.size();
-
-            if (arg > 0) {
-                _heap.resize(_heap.size() + (arg - _heap.base()));
-            }
-
-            _reg.write(rv64::reg::a0, res);
-            return true;
-        }
+        case rv64::syscall::brk:
+            return _brk();
 
         case rv64::syscall::mmap:
             return _mmap();
@@ -204,10 +231,41 @@ bool rv64_executor::_syscall(int& retval) {
                 _reg.read(rv64::reg::a5)
             };
 
-            throw invalid_syscall(pc, id, args);
+            throw invalid_syscall(pc, id, std::span(args.begin(), args.end()));
         }
     }
 
+    return true;
+}
+
+bool rv64_executor::_brk() {
+    uint64_t new_addr = _reg.read(rv64::reg::a0);
+    uint64_t res = 0;
+
+    /* Current break */
+    res = _heap.base() + _heap.size();
+
+    if (new_addr > 0) {
+        /* Clamp to a reasonable value */
+        new_addr = std::clamp(new_addr, _heap.base(), _hole_list.front().end * page_size);
+
+        /* Round up to a page */
+        new_addr = (new_addr + page_size - 1) & uint64_t(-page_size);
+
+        ssize_t new_size = new_addr - res;
+
+        fmt::print(std::cerr, "growing by {}\n", new_size);
+
+        if (new_size < _heap.size()) {
+            /* Shrink, insert new hole */
+        } else if (new_size > _heap.size()) {
+            /* Grow, shrink the first hole */
+            //if 
+        }
+        return false;
+    }
+
+    _reg.write(rv64::reg::a0, res);
     return true;
 }
 
@@ -218,6 +276,12 @@ bool rv64_executor::_mmap() {
     uint64_t flags  = _reg.read(rv64::reg::a3);
     uint64_t fd     = _reg.read(rv64::reg::a4);
     uint64_t offset = _reg.read(rv64::reg::a5);
+
+    if (addr) {
+        throw invalid_syscall("mmap at address is not supported");
+    } else if (fd != uint64_t(-1)) {
+        throw invalid_syscall("mmap of fd is not supported");
+    }
     return false;
 }
 
@@ -274,7 +338,11 @@ bool rv64_executor::validate_registers(std::shared_ptr<cpptoml::table> post, std
 rv64_executor::rv64_executor(elf_file& elf, virtual_memory& mem, uintptr_t entry, uintptr_t sp, std::shared_ptr<cpptoml::table> config)
     : executor(elf, mem, entry, sp)
     , _config { config }, _fmt { _dec, _reg }
-    , _heap { dynamic_cast<growable_memory&>(mem.get_first(virtual_memory::role::heap)) } {
+    , _heap { dynamic_cast<growable_memory&>(mem.get_first(virtual_memory::role::heap)) }
+    , _stack { dynamic_cast<memory_backed_memory&>(mem.get_first(virtual_memory::role::stack)) } {
+
+    _hole_list.push_back({ .start = _heap.base() + _heap.size(), .end = _stack.base() });
+
     if (config) {
         init_registers(_config->get_table_qualified("regfile.init"));
 
@@ -352,6 +420,17 @@ std::ostream& rv64_executor::print_state(std::ostream& os) const {
     if (_verbose || !_testmode) {
         fmt::print(os, "RISC-V 64-bit executor, entrypoint = {:#08x}, pc = {:#08x}, sp = {:#08x}\n", entry, pc, sp);
         os << mem;
+
+        fmt::print(os, "Memory: ");
+        for (auto [start, end] : _hole_list) {
+            fmt::print(os, "[{:#x}, {:#x}]", start, end);
+
+            if (_hole_list.back().start != start || _hole_list.back().end != end) {
+                fmt::print(os, ", ");
+            } else {
+                fmt::print(os, "\n");
+            }
+        }
         _fmt.regs(os);
     }
 

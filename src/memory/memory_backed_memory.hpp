@@ -15,7 +15,7 @@ class memory_backed_memory : public memory {
     protected:
     permissions perms;
     uintptr_t base_addr;
-    size_t size;
+    size_t mapped_size;
     std::align_val_t alignment;
 
     aligned_unique_ptr<uint8_t[]> data;
@@ -66,6 +66,9 @@ class memory_backed_memory : public memory {
 
     memory_backed_memory(memory_backed_memory&& other) noexcept = default;
     memory_backed_memory& operator=(memory_backed_memory&& other) noexcept = default;
+
+    [[nodiscard]] uintptr_t base() const;
+    [[nodiscard]] size_t size() const;
 
     [[nodiscard]] bool contains(uintptr_t addr) const override;
 
