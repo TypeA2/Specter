@@ -64,8 +64,8 @@ class rv64_executor : public executor {
     bool _exec_b();
 
     bool _syscall(int& retval);
-    bool _brk();
-    bool _mmap();
+    uint64_t _brk();
+    uint64_t _mmap();
 
     /* Increment PC */
     void next_instr();

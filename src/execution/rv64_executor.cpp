@@ -210,16 +210,20 @@ bool rv64_executor::_exec_b() {
 bool rv64_executor::_syscall(int& retval) {
     uint64_t id = _reg.read(rv64::reg::a7);
 
+    uint64_t res;
+
     switch (static_cast<rv64::syscall>(id)) {
         case rv64::syscall::exit:
             retval = _reg.read(rv64::reg::a0);
             return false;
 
         case rv64::syscall::brk:
-            return _brk();
+            res = _brk();
+            break;
 
         case rv64::syscall::mmap:
-            return _mmap();
+            res = _mmap();
+            break;
 
         default: {
             std::vector<uint64_t> args {
@@ -235,17 +239,22 @@ bool rv64_executor::_syscall(int& retval) {
         }
     }
 
+    _reg.write(rv64::reg::a0, res);
+
     return true;
 }
 
-bool rv64_executor::_brk() {
-    uint64_t new_addr = _reg.read(rv64::reg::a0);
-    uint64_t res = 0;
+uint64_t rv64_executor::_brk() {
+    uint64_t newbrk = _reg.read(rv64::reg::a0);
 
     /* Current break */
-    res = _heap.base() + _heap.size();
+    uint64_t oldbrk = _heap.base() + _heap.size();
 
-    if (new_addr > 0) {
+    if (newbrk < _heap.base()) {
+        return oldbrk;
+    }
+
+    if (newbrk > 0) {
         /* Clamp to a reasonable value */
         new_addr = std::clamp(new_addr, _heap.base(), _hole_list.front().end * page_size);
 
@@ -262,14 +271,13 @@ bool rv64_executor::_brk() {
             /* Grow, shrink the first hole */
             //if 
         }
-        return false;
+        return uint64_t(-1);
     }
 
-    _reg.write(rv64::reg::a0, res);
     return true;
 }
 
-bool rv64_executor::_mmap() {
+uint64_t rv64_executor::_mmap() {
     uint64_t addr   = _reg.read(rv64::reg::a0);
     uint64_t length = _reg.read(rv64::reg::a1);
     uint64_t prot   = _reg.read(rv64::reg::a2);
@@ -282,7 +290,7 @@ bool rv64_executor::_mmap() {
     } else if (fd != uint64_t(-1)) {
         throw invalid_syscall("mmap of fd is not supported");
     }
-    return false;
+    return uin64_t(-1);
 }
 
 void rv64_executor::next_instr() {
