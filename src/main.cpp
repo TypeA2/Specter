@@ -84,7 +84,7 @@ struct specter_options {
                 }
                 
                 opts.argv.emplace_back(std::move(argv0));
-            } catch (const cxxopts::OptionException& e) {
+            } catch (const cxxopts::exceptions::exception& e) {
                 /* No executable on command line, use config if given else error */
                 if (!opts.executable.empty()) {
                     /* Use non-canonical executable as argv*/

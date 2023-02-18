@@ -31,6 +31,7 @@ namespace arch::rv64 {
             case opc::load:
             case opc::addi:
             case opc::addiw:
+            case opc::fence:
                 _type = instr_type::I;
                 _decode_i();
                 break;
@@ -343,6 +344,16 @@ namespace arch::rv64 {
                     }
                     default: throw illegal_instruction(_pc, _instr, "addiw");
                 }
+                break;
+            }
+
+            case opc::fence: {
+                if (_funct) {
+                    throw illegal_instruction(_pc, _instr, "fence");
+                }
+                _op = alu_op::nop; 
+                _imm &= 0xfff;
+
                 break;
             }
 

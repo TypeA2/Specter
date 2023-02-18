@@ -70,6 +70,7 @@ namespace arch::rv64 {
         ecall      = 0b1110011,
         addiw      = 0b0011011,
         addw       = 0b0111011,
+        fence      = 0b0001111,
 
         /* RVC Q0 */
         c_addi4spn = 0b0000000,

@@ -11,12 +11,9 @@ using namespace magic_enum::bitwise_operators;
 void growable_memory::access_check(uintptr_t addr, size_t size) {
     for (size_t i = 0; i < size; ++i) {
         if (!contains(addr + i)) {
-            return;
+            throw illegal_access("illegal access of size {} at {:#x}", size, addr);
         }
     }
-
-    throw illegal_access("illegal access at {:#x}", addr);
-
 }
 
 growable_memory::growable_memory(std::endian endian, uintptr_t vaddr, std::string_view tag)

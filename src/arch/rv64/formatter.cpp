@@ -108,6 +108,10 @@ namespace arch::rv64 {
                 }
             }
 
+            case opc::fence: {
+                return "fence";
+            }
+
             default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::opcode");
         }
     }
@@ -282,6 +286,11 @@ namespace arch::rv64 {
                     case opc::jalr:
                     case opc::load: {
                         fmt::print(os, "{}, {}({})", _dec.rd(), int64_t(imm), _dec.rs1());
+                        break;
+                    }
+
+                    case opc::fence: {
+                        fmt::print(os, "{:#x}", imm);
                         break;
                     }
 

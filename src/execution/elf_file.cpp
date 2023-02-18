@@ -187,6 +187,7 @@ virtual_memory elf_file::load() {
 
             res.add((program.p_flags & PF_X) ? virtual_memory::role::text : virtual_memory::role::generic, std::move(mem));
 
+            // Heap starts after any loaded programs
             heap_start = std::max(heap_start, program.p_vaddr + program.p_memsz);
         } else if (program.p_type == PT_INTERP) {
             // fmt::print(std::cerr, "Interpreter: {}\n", _mapping.get_at<char>(program.p_offset));

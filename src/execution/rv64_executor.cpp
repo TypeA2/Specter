@@ -32,10 +32,15 @@ bool rv64_executor::_allocate_pages(size_t idx, size_t count) {
             };
 
             if (before.size() == 0 && after.size() != 0) {
+                /* Memory allocated at the start of an existing hole, shrink */
                 hole = after;
             } else if (before.size() != 0 && after.size() == 0) {
+                /* Memory allocated at the end of an existing hole, shrink */
                 hole = before;
             } else {
+                /* Memory allocated in the middle of an existing hole,
+                 * shrink it and insert the new one
+                 */
                 hole = before;
 
                 ++it;
@@ -128,6 +133,11 @@ bool rv64_executor::_exec_i(int& retval) {
         case rv64::opc::addi:
         case rv64::opc::addiw: {
             _reg.write(_dec.rd(), _alu.result());
+            break;
+        }
+
+        case rv64::opc::fence: {
+            /* FENCE no-op for now */
             break;
         }
 
@@ -250,31 +260,34 @@ uint64_t rv64_executor::_brk() {
     /* Current break */
     uint64_t oldbrk = _heap.base() + _heap.size();
 
+    // No shrinking, and if newbrk == 0, it's just a request for the current break
+
     if (newbrk < _heap.base()) {
         return oldbrk;
     }
 
     if (newbrk > 0) {
-        /* Clamp to a reasonable value */
-        new_addr = std::clamp(new_addr, _heap.base(), _hole_list.front().end * page_size);
+        /* Clamp to a reasonable value.
+         * brk always grows into the first hole, as it must be contiguous.
+         */
+        newbrk = std::clamp(newbrk, _heap.base(), _hole_list.front().end * page_size);
 
         /* Round up to a page */
-        new_addr = (new_addr + page_size - 1) & uint64_t(-page_size);
+        newbrk = (newbrk + page_size - 1) & uint64_t(-page_size);
 
-        ssize_t new_size = new_addr - res;
+        ssize_t growth = newbrk - oldbrk;
 
-        fmt::print(std::cerr, "growing by {}\n", new_size);
+        //fmt::print(std::cerr, "old = {}, new = {}\n", oldbrk, newbrk);
+        //fmt::print(std::cerr, "growing by {}\n", growth);
 
-        if (new_size < _heap.size()) {
-            /* Shrink, insert new hole */
-        } else if (new_size > _heap.size()) {
-            /* Grow, shrink the first hole */
-            //if 
-        }
-        return uint64_t(-1);
+        /* Growth and shrink are the same operation*/
+        _heap.resize(_heap.size() + growth);
+        _hole_list.front().start += (growth / page_size);
+
+        return newbrk;
     }
 
-    return true;
+    return oldbrk;
 }
 
 uint64_t rv64_executor::_mmap() {
@@ -290,7 +303,8 @@ uint64_t rv64_executor::_mmap() {
     } else if (fd != uint64_t(-1)) {
         throw invalid_syscall("mmap of fd is not supported");
     }
-    return uin64_t(-1);
+    throw invalid_syscall("mmap");
+    return uint64_t(-1);
 }
 
 void rv64_executor::next_instr() {
