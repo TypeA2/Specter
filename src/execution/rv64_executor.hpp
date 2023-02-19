@@ -50,6 +50,10 @@ class rv64_executor : public executor {
 
     bool _allocate_pages(size_t idx, size_t count);
 
+    uintptr_t clear_child_tid = 0;
+    uintptr_t robust_list_head = 0;
+    uintptr_t robust_list_len = 0;
+
     /* Fetch an instruction */
     void fetch();
 

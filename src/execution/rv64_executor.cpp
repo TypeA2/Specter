@@ -220,13 +220,23 @@ bool rv64_executor::_exec_b() {
 bool rv64_executor::_syscall(int& retval) {
     uint64_t id = _reg.read(rv64::reg::a7);
 
-    uint64_t res;
+    uint64_t res = 0;
 
     switch (static_cast<rv64::syscall>(id)) {
         case rv64::syscall::exit:
             retval = _reg.read(rv64::reg::a0);
             return false;
 
+        case rv64::syscall::set_tid_address:
+            clear_child_tid = _reg.read(rv64::reg::a0);
+            res = 1; /* Temporary PID */
+            break;
+
+        case rv64::syscall::set_robust_list:
+            robust_list_head = _reg.read(rv64::reg::a0);
+            robust_list_len = _reg.read(rv64::reg::a1);
+            break;
+        
         case rv64::syscall::brk:
             res = _brk();
             break;
