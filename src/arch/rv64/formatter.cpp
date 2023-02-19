@@ -160,6 +160,11 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_addiw: {
+                fmt::print(os, "c.addiw {}, {}", _dec.rd(), int64_t(_dec.imm()));
+                break;
+            }
+
             case opc::c_li: {
                 fmt::print(os, "c.li {}, {}", _dec.rd(), int64_t(_dec.imm()));
                 break;

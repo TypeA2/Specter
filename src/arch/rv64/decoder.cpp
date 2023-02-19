@@ -125,6 +125,22 @@ namespace arch::rv64 {
                 break;
             }
 
+            case opc::c_addiw: {
+                _type = instr_type::I;
+                _opcode = opc::addiw;
+                _funct = 0b000; /* addiw */
+                _op = alu_op::addw;
+
+                _rd = static_cast<reg>((_instr >> 7) & 0b11111);
+                if (_rd == reg::zero) {
+                    throw illegal_compressed_instruction(_pc, _instr, "c.addiw rd == 0");
+                }
+                _rs1 = _rd;
+
+                _imm = sign_extend<6>(((_instr >> 2) & 0b11111) | ((_instr >> 7) & 0b100000));
+                break;
+            }
+
             case opc::c_li: {
                 _type = instr_type::I;
                 _opcode = opc::addi;

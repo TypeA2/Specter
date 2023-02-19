@@ -1,0 +1,23 @@
+[execution]
+executable = "c.addiw.rv64"
+
+[regfile.init]
+s0 = 1234
+s1 = 1234
+s2 = -42
+s3 = -18
+s4 = 0x7ffffff2
+
+a0 = 42
+a7 = 93
+
+[testing]
+retval = 42
+depends = [ "ecall", "addiw" ]
+
+[testing.regfile.post]
+s0 = 1260
+s1 = 1208
+s2 = -68
+s3 = 8
+s4 = -2147483636
