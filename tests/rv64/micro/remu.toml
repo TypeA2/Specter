@@ -1,0 +1,27 @@
+[execution]
+executable = "remu.rv64"
+
+[regfile.init]
+t0 = 1234
+t1 = 5678
+t2 = -42
+t3 = 0x1afcdf0101010
+
+# 0xf0101010
+t4 = -4027584528
+
+t5 = -4
+
+a0 = 42
+a7 = 93
+
+[testing]
+retval = 42
+depends = "ecall"
+
+[testing.regfile.post]
+s0 = 742
+s1 = 842
+s2 = 38
+s3 = 4188
+s4 = 0x13debda1a23a0

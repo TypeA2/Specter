@@ -81,6 +81,8 @@ namespace arch::rv64 {
                     case 0b0000001000: return "mul";
                     case 0b0000001100: return "div";
                     case 0b0000001101: return "divu";
+                    case 0b0000001110: return "rem";
+                    case 0b0000001111: return "remu";
                     default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::add");
                 }
             }

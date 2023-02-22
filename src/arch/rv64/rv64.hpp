@@ -57,7 +57,7 @@ namespace arch::rv64 {
     };
 
     enum class opc : uint8_t {
-        /* RV64I */
+        /* RV64IM */
         lui        = 0b0110111,
         auipc      = 0b0010111,
         jal        = 0b1101111,
@@ -115,7 +115,7 @@ namespace arch::rv64 {
         forward_a, forward_b,
 
         /* Arithmetics*/
-        add, sub, div, divu, mul,
+        add, sub, div, divu, mul, rem, remu,
 
         addw, subw,
 
