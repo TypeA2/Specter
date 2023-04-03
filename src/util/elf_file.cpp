@@ -10,10 +10,11 @@
 
 #include <fmt/ostream.h>
 
-#include <memory/memory_backed_memory.hpp>
-#include <memory/growable_memory.hpp>
-
-#include <execution/rv64_executor.hpp>
+#ifdef SPECTER_ENABLE_EXECUTION
+#   include <memory/memory_backed_memory.hpp>
+#   include <memory/growable_memory.hpp>
+#   include <execution/rv64_executor.hpp>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -29,24 +30,6 @@ namespace detail {
         
         return fd;
     }
-}
-
-Elf64_Ehdr& elf_file::hdr() const {
-    return *_mapping.get<Elf64_Ehdr>();
-}
-
-std::span<Elf64_Phdr> elf_file::programs() const {
-    auto& hdr = this->hdr();
-    return std::span(_mapping.get_at<Elf64_Phdr>(hdr.e_phoff), hdr.e_phnum);
-}
-
-std::span<Elf64_Shdr> elf_file::sections() const {
-    auto& hdr = this->hdr();
-    return std::span(_mapping.get_at<Elf64_Shdr>(hdr.e_shoff), hdr.e_shnum);
-}
-
-std::string_view elf_file::str(uint32_t idx) const {
-    return std::string_view(_mapping.get_at<char>(sections()[hdr().e_shstrndx].sh_offset + idx));
 }
 
 elf_file::elf_file(const fs::path& path)
@@ -155,15 +138,49 @@ size_t elf_file::page_size() const {
     return sysconf(_SC_PAGESIZE);
 }
 
+Elf64_Ehdr& elf_file::hdr() const {
+    return *_mapping.get<Elf64_Ehdr>();
+}
+
+std::span<const Elf64_Phdr> elf_file::programs() const {
+    auto& hdr = this->hdr();
+    return std::span(_mapping.get_at<Elf64_Phdr>(hdr.e_phoff), hdr.e_phnum);
+}
+
+std::span<const Elf64_Shdr> elf_file::sections() const {
+    auto& hdr = this->hdr();
+    return std::span(_mapping.get_at<Elf64_Shdr>(hdr.e_shoff), hdr.e_shnum);
+}
+
+std::string_view elf_file::str(uint32_t idx) const {
+    return std::string_view(_mapping.get_at<char>(sections()[hdr().e_shstrndx].sh_offset + idx));
+}
+
+const Elf64_Shdr& elf_file::section(std::string_view name) const {
+    for (const auto& s : sections()) {
+        if (str(s.sh_name) == name) {
+            return s;
+        }
+    }
+
+    throw std::out_of_range(fmt::format("Section \"{}\" not found", name));
+}
+
+std::span<const std::byte> elf_file::section_data(std::string_view name) const {
+    const Elf64_Shdr& hdr = section(name);
+    return std::span<const std::byte>(_mapping.get_at<const std::byte>(hdr.sh_offset), hdr.sh_size);
+}
+
+uintptr_t elf_file::section_address(std::string_view name) const {
+    return section(name).sh_addr;
+}
+
+#ifdef SPECTER_ENABLE_EXECUTION
 virtual_memory elf_file::load() {
     virtual_memory res {
         (byte_order() == elf::endian::lsb) ? std::endian::little : std::endian::big,
         relative(_path).string()
     };
-
-    // for (auto& s : sections()) {
-    //    fmt::print(std::cerr, "{} @ {:#x}, {}, {}\n", str(s.sh_name), s.sh_addr, s.sh_offset, s.sh_size);
-    // }
 
     /* _SC_PAGESIZE is guaranteed to be >0 */
     res.add<virtual_memory::role::stack, memory_backed_memory>(
@@ -212,3 +229,4 @@ std::unique_ptr<executor> elf_file::make_executor(virtual_memory& mem, uintptr_t
 
     throw invalid_file("tried to make executor for unsupported file {}", machine());
 }
+#endif

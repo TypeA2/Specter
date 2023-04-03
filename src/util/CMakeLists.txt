@@ -1,5 +1,6 @@
 add_library(
 	specter_util
+    "elf_file.hpp" "elf_file.cpp"
 	"mapped_file.hpp" "mapped_file.cpp"
     "formatting.hpp"  "aligned_memory.hpp"
 )
@@ -14,8 +15,8 @@ find_package(magic_enum CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(range-v3 CONFIG REQUIRED)
 
-target_link_libraries(specter PRIVATE cxxopts::cxxopts)
-target_link_libraries(specter PRIVATE magic_enum::magic_enum)
+target_link_libraries(specter_util PRIVATE cxxopts::cxxopts)
+target_link_libraries(specter_util PRIVATE magic_enum::magic_enum)
 target_link_libraries(specter_util PUBLIC fmt::fmt)
 target_link_libraries(specter_util PUBLIC range-v3 range-v3-meta range-v3::meta range-v3-concepts)
 

@@ -13,9 +13,10 @@
 #include <util/mapped_file.hpp>
 #include <util/formatting.hpp>
 
-#include <memory/virtual_memory.hpp>
-
-#include <execution/executor.hpp>
+#ifdef SPECTER_ENABLE_EXECUTION
+#   include <memory/virtual_memory.hpp>
+#   include <execution/executor.hpp>
+#endif
 
 class invalid_file : public std::runtime_error {
     public:
@@ -73,10 +74,10 @@ namespace elf {
     };
 
     enum class machine : uint16_t {
-        AMD64 = EM_X86_64,
+        AMD64   = EM_X86_64,
         AArch64 = EM_AARCH64,
-        CUDA = EM_CUDA,
-        RiscV = EM_RISCV
+        CUDA    = EM_CUDA,
+        RiscV   = EM_RISCV
     };
 }
 
@@ -101,13 +102,19 @@ class elf_file {
     [[nodiscard]] size_t page_size() const;
 
     [[nodiscard]] Elf64_Ehdr& hdr() const;
-    [[nodiscard]] std::span<Elf64_Phdr> programs() const;
-    [[nodiscard]] std::span<Elf64_Shdr> sections() const;
+    [[nodiscard]] std::span<const Elf64_Phdr> programs() const;
+    [[nodiscard]] std::span<const Elf64_Shdr> sections() const;
 
     [[nodiscard]] std::string_view str(uint32_t idx) const;
 
+    [[nodiscard]] const Elf64_Shdr& section(std::string_view name) const;
+    [[nodiscard]] std::span<const std::byte> section_data(std::string_view name) const;
+    [[nodiscard]] uintptr_t section_address(std::string_view name) const;
+
+#ifdef SPECTER_ENABLE_EXECUTION
     [[nodiscard]] virtual_memory load();
 
     [[nodiscard]] std::unique_ptr<executor> make_executor(
         virtual_memory& mem, uintptr_t entry, std::shared_ptr<cpptoml::table> config = nullptr);
+#endif
 };

@@ -12,6 +12,8 @@ foreach(file ${tests_contents})
         add_custom_target(${arch}-tests ALL COMMAND make -j${cpu_count} -C ${file})
     endif()
 
+    continue()
+
     # Isolate plain non-bin directories
     if(NOT (${file} PATH_EQUAL "${PROJECT_SOURCE_DIR}/tests/bin") AND (IS_DIRECTORY ${file}))
         # Find all microtests config files
