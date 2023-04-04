@@ -5,41 +5,60 @@
 
 #include <fmt/ostream.h>
 
-namespace arch::rv64 {
-    std::string_view formatter::_instr_name() const {
-        switch (_dec.opcode()) {
-            case opc::lui: return "lui";
+#include <magic_enum.hpp>
+
+using namespace magic_enum::bitwise_operators;
+
+namespace {
+    using namespace arch::rv64;
+
+    [[nodiscard]] std::string_view instr_name_regular(const decoder& dec) {
+        switch (dec.opcode()) {
+            case opc::lui:   return "lui";
             case opc::auipc: return "auipc";
-            case opc::jal: return "jal";
-            case opc::jalr: return "jalr";
+            case opc::jal:   return "jal";
+            case opc::jalr:  return "jalr";
 
             case opc::branch: {
-                switch (_dec.funct()) {
-                    case 0b000: return "beq";
-                    case 0b001: return "bne";
-                    case 0b100: return "blt";
-                    case 0b101: return "bge";
-                    case 0b110: return "bltu";
-                    case 0b111: return "bgeu";
-                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::branch");
+                switch (dec.comparison()) {
+                    case branch_comp::eq:  return "beq";
+                    case branch_comp::ne:  return "bne";
+                    case branch_comp::lt:  return "blt";
+                    case branch_comp::ge:  return "bge";
+                    case branch_comp::ltu: return "bltu";
+                    case branch_comp::geu: return "bgeu";
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "unknown funct code (branch)");
                 }
+                break;
             }
 
             case opc::load: {
-                switch (_dec.funct()) {
-                    case 0b000: return "lb";
-                    case 0b001: return "lh";
-                    case 0b010: return "lw";
-                    case 0b011: return "ld";
-                    case 0b100: return "lbu";
-                    case 0b101: return "lhu";
-                    case 0b110: return "lwu";
-                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::load");
+                switch (dec.memory()) {
+                    case mem_size::s8:  return "lb";
+                    case mem_size::s16: return "lh";
+                    case mem_size::s32: return "lw";
+                    case mem_size::s64: return "ld";
+                    case mem_size::u8:  return "lbu";
+                    case mem_size::u16: return "lhu";
+                    case mem_size::u32: return "lwu";
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "unknown memsize (load)");
                 }
+                break;
+            }
+
+            case opc::store: {
+                switch (dec.memory()) {
+                    case mem_size::s8:  return "sb";
+                    case mem_size::s16: return "sh";
+                    case mem_size::s32: return "sw";
+                    case mem_size::s64: return "sd";
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "unknown memsize (store)");
+                }
+                break;
             }
 
             case opc::addi: {
-                switch (_dec.funct()) {
+                switch (dec.funct()) {
                     case 0b000: return "addi";
                     case 0b010: return "slti";
                     case 0b011: return "sltiu";
@@ -47,232 +66,504 @@ namespace arch::rv64 {
                     case 0b110: return "ori";
                     case 0b111: return "andi";
                     case 0b001: return "slli";
-                    case 0b101: {
-                        switch (_dec.imm() >> 10) {
-                            case 0b00: return "srli";
-                            case 0b01: return "srai";
-                            default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::srli/srai");
+                    case 0b101:
+                        if (dec.imm() & ~0b111111) {
+                            return "srai";
+                        } else {
+                            return "srli";
                         }
-                    }
-                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addi");
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "unknown funct code (addi)");
                 }
+                break;
             }
 
-            case opc::store: {
-                switch (_dec.funct()) {
-                    case 0b000: return "sb";
-                    case 0b001: return "sh";
-                    case 0b010: return "sw";
-                    case 0b011: return "sd";
-                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::store");
+            case opc::addiw: {
+                switch (dec.funct()) {
+                    case 0b000: return "addiw";
+                    case 0b001: return "slliw";
+                    case 0b101:
+                        if (dec.imm() & ~0b11111) {
+                            return "sraiw";
+                        } else {
+                            return "srliw";
+                        }
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "unknown funct code (addiw)");
                 }
+                break;
             }
-
 
             case opc::add: {
-                switch (_dec.funct()) {
+                switch (dec.funct()) {
+                    /* RV64I */
                     case 0b0000000000: return "add";
                     case 0b0100000000: return "sub";
+                    case 0b0000000001: return "sll";
+                    case 0b0000000010: return "slt";
+                    case 0b0000000011: return "sltu";
                     case 0b0000000100: return "xor";
+                    case 0b0000000101: return "srl";
+                    case 0b0100000101: return "sra";
                     case 0b0000000110: return "or";
                     case 0b0000000111: return "and";
 
                     /* RV64M */
                     case 0b0000001000: return "mul";
+                    case 0b0000001001: return "mulh";
+                    case 0b0000001010: return "mulhsu";
+                    case 0b0000001011: return "mulhu";
                     case 0b0000001100: return "div";
                     case 0b0000001101: return "divu";
                     case 0b0000001110: return "rem";
                     case 0b0000001111: return "remu";
-                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::add");
-                }
-            }
 
-            case opc::addiw: {
-                switch (_dec.funct()) {
-                    case 0b000: return "addiw";
-                    case 0b001: return "slliw";
-                    case 0b101: {
-                        switch (_dec.imm() >> 10) {
-                            case 0b00: return "srliw";
-                            case 0b01: return "sraiw";
-                            default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::srliw/sraiw");
-                        }
-                    }
-                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addiw");
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "unknown funct code (add)");
                 }
+                break;
             }
 
             case opc::addw: {
-                switch (_dec.funct()) {
+                switch (dec.funct()) {
+                    /* RV64I */
                     case 0b0000000000: return "addw";
                     case 0b0100000000: return "subw";
-                    default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::addw");
-                }
-            }
+                    case 0b0000000001: return "sllw";
+                    case 0b0000000101: return "srlw";
+                    case 0b0100000101: return "sraw";
 
-            case opc::fence: {
-                return "fence";
-            }
+                    /* RV64M */
+                    case 0b0000001000: return "mulw";
+                    case 0b0000001100: return "divw";
+                    case 0b0000001101: return "divuw";
+                    case 0b0000001110: return "remw";
+                    case 0b0000001111: return "remuw";
 
-            default: throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::_instr_name::opcode");
-        }
-    }
-
-    std::ostream& formatter::_format_compressed(std::ostream& os) const {
-        /* Another option would be reverse engineering the original instruction from the translated
-         * instruction, which would probably be even worse than re-decoding like this
-         */
-
-        /* Store as uint32_t to prevent unexpected conversion */
-        uint32_t instr = _dec.instr();
-        fmt::print(os, "{:x}:  {:04x}       ", _dec.pc(), instr);
-        switch (static_cast<opc>(((instr >> 11) & 0b11100) | (instr & 0b11))) {
-            case opc::c_addi4spn: {
-                fmt::print(os, "c.addi4spn {}, sp, {}", _dec.rd(), _dec.imm());
-                break;
-            }
-
-            case opc::c_lw: {
-                fmt::print(os, "c.lw {}, {}({})", _dec.rd(), _dec.imm(), _dec.rs1());
-                break;
-            }
-
-            case opc::c_ld: {
-                fmt::print(os, "c.ld {}, {}({})", _dec.rd(), _dec.imm(), _dec.rs1());
-                break;
-            }
-
-            case opc::c_sw: {
-                fmt::print(os, "c.sw {}, {}({})", _dec.rs2(), _dec.imm(), _dec.rs1());
-                break;
-            }
-
-            case opc::c_sd: {
-                fmt::print(os, "c.sd {}, {}({})", _dec.rs2(), _dec.imm(), _dec.rs1());
-                break;
-            }
-
-            case opc::c_nop: {
-                auto rd = _dec.rd();
-                if (rd == reg::zero) {
-                    fmt::print(os, "c.nop");
-                } else {
-                    fmt::print(os, "c.addi {}, {}", rd, int64_t(_dec.imm()));
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "unknown funct code (addw)");
                 }
                 break;
             }
 
-            case opc::c_addiw: {
-                fmt::print(os, "c.addiw {}, {}", _dec.rd(), int64_t(_dec.imm()));
-                break;
-            }
-
-            case opc::c_li: {
-                fmt::print(os, "c.li {}, {}", _dec.rd(), int64_t(_dec.imm()));
-                break;
-            }
-
-            case opc::c_addi16sp: {
-                auto rd = _dec.rd();
-
-                if (rd == reg::sp) {
-                    /* c.addi16sp */
-                    fmt::print(os, "c.addi16sp sp, {}", int64_t(_dec.imm()));
-                } else {
-                    /* c.lui */
-                    fmt::print(os, "c.lui {}, {:#x}",  rd, (_dec.imm() >> 12) & 0xfffff);
+            case opc::ecall: {
+                switch (dec.imm()) {
+                    case 0: return "ecall";
+                    case 1: return "ebreak";
+                    default: illegal_instruction(dec.pc(), dec.instr(), "ecall imm");
                 }
                 break;
             }
 
-            case opc::c_srli: {
-                switch ((instr >> 10) & 0b11) {
-                    case 0b00: fmt::print(os, "c.srli {}, {}", _dec.rd(), _dec.imm() & 0b111111); break;
-                    case 0b01: fmt::print(os, "c.srai {}, {}", _dec.rd(), _dec.imm() & 0b111111); break;
-                    case 0b10: fmt::print(os, "c.andi {}, {}", _dec.rd(), int64_t(_dec.imm())); break;
-                    case 0b11: {
-                        if (instr & (1 << 12)) {
-                            switch ((instr >> 5) & 0b11) {
-                                case 0b00: fmt::print(os, "c.subw {}, {}", _dec.rd(), _dec.rs2()); break;
-                                case 0b01: fmt::print(os, "c.addw {}, {}", _dec.rd(), _dec.rs2()); break;
-                                default: throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed::c_srli::reserved");
+            case opc::fload: {
+                switch (dec.memory()) {
+                    case mem_size::f32: return "flw";
+                    case mem_size::f64: return "fld";
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid fload size");
+                }
+                break;
+            }
+
+            case opc::fstore: {
+                switch (dec.memory()) {
+                    case mem_size::f32: return "fsw";
+                    case mem_size::f64: return "fsd";
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid fstore size");
+                }
+                break;
+            }
+
+            case opc::fmadd: { 
+                switch (dec.float_type()) {
+                    case float_fmt::f32: return "fmadd.s";
+                    case float_fmt::f64: return "fmadd.d";
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid float format (fmadd)");
+                }
+                break;
+            }
+
+            case opc::fmsub: { 
+                switch (dec.float_type()) {
+                    case float_fmt::f32: return "fmsub.s";
+                    case float_fmt::f64: return "fmsub.d";
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid float format (fmsub)");
+                }
+                break;
+            }
+
+            case opc::fnmsub: { 
+                switch (dec.float_type()) {
+                    case float_fmt::f32: return "fnmsub.s";
+                    case float_fmt::f64: return "fnmsub.d";
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid float format (fnmsub)");
+                }
+                break;
+            }
+
+            case opc::fnmadd: { 
+                switch (dec.float_type()) {
+                    case float_fmt::f32: return "fnmadd.s";
+                    case float_fmt::f64: return "fnmadd.d";
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid float format (fnmadd)");
+                }
+                break;
+            }
+
+            case opc::fadd: {
+                switch (dec.float_type()) {
+                    case float_fmt::f32: {
+                        /* Ignore rounding mode and format fields */
+                        switch (dec.funct() >> 5) {
+                            case 0b00000: return "fadd.s";
+                            case 0b00001: return "fsub.s";
+                            case 0b00010: return "fmul.s";
+                            case 0b00011: return "fdiv.s";
+                            case 0b01011: return "fsqrt.s";
+
+                            case 0b00100: {
+                                switch (dec.funct() & 0b111) {
+                                    case 0b000: return "fsgnj.s";
+                                    case 0b001: return "fsgnjn.s";
+                                    case 0b010: return "fsgnjx.s";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid f32 fsgn");
+                                }
+                                break;
                             }
-                        } else {
-                            switch ((instr >> 5) & 0b11) {
-                                case 0b00: fmt::print(os, "c.sub {}, {}", _dec.rd(), _dec.rs2()); break;
-                                case 0b01: fmt::print(os, "c.xor {}, {}", _dec.rd(), _dec.rs2()); break;
-                                case 0b10: fmt::print(os, "c.or {}, {}", _dec.rd(), _dec.rs2()); break;
-                                case 0b11: fmt::print(os, "c.and {}, {}", _dec.rd(), _dec.rs2()); break;
+
+                            case 0b00101: {
+                                switch (dec.funct() & 0b111) {
+                                    case 0b000: return "fmin.s";
+                                    case 0b001: return "fmax.s";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid f32 fmin/fmax");
+                                }
+                                break;
                             }
+
+                            case 0b11000: {
+                                switch (static_cast<uint8_t>(dec.rs2()) & 0b11111) {
+                                    case 0b00000: return "fcvt.w.s";
+                                    case 0b00001: return "fcvt.wu.s";
+                                    case 0b00010: return "fcvt.l.s";
+                                    case 0b00011: return "fcvt.lu.s";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid fcvt.w[u].s rs2");
+                                }
+                                break;
+                            }
+
+                            case 0b11100: {
+                                switch (dec.funct() & 0b111) {
+                                    case 0b000: return "fmv.x.s";
+                                    case 0b001: return "fclass.s";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid funct fmv.x/fclass");
+                                }
+                                break;
+                            }
+
+                            case 0b10100: {
+                                switch (dec.funct() & 0b111) {
+                                    case 0b000: return "fle.s";
+                                    case 0b001: return "flt.s";
+                                    case 0b010: return "feq.s";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid f32 branch");
+                                }
+                                break;
+                            }
+
+                            case 0b11110: return "fmv.w.x";
+
+                            case 0b01000: {
+                                switch (static_cast<float_fmt>(dec.rs2())) {
+                                    case float_fmt::f64: return "fcvt.s.d";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid fconv f32 dst");
+                                }
+                                break;
+                            }
+
+                            case 0b11010: {
+                                switch (static_cast<uint8_t>(dec.rs2())) {
+                                    case 0b00000: return "fcvt.s.w";
+                                    case 0b00001: return "fcvt.s.wu";
+                                    case 0b00010: return "fcvt.s.l";
+                                    case 0b00011: return "fcvt.s.lu";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid fcvt.f f32");
+                                }
+                                break;
+                            }
+
+                            default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid f32 funct(fadd)");
                         }
                         break;
                     }
-                    default: throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed::c_srli");
+
+                    case float_fmt::f64: {
+                        switch (dec.funct() >> 5) {
+                            case 0b00000: return "fadd.d";
+                            case 0b00001: return "fsub.d";
+                            case 0b00010: return "fmul.d";
+                            case 0b00011: return "fdiv.d";
+                            case 0b01011: return "fsqrt.d";
+
+                            case 0b00100: {
+                                switch (dec.funct() & 0b111) {
+                                    case 0b000: return "fsgnj.d";
+                                    case 0b001: return "fsgnjn.d";
+                                    case 0b010: return "fsgnjx.d";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid f64 fsgn");
+                                }
+                                break;
+                            }
+
+                            case 0b00101: {
+                                switch (dec.funct() & 0b111) {
+                                    case 0b000: return "fmin.d";
+                                    case 0b001: return "fmax.d";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid f64 fmin/fmax");
+                                }
+                                break;
+                            }
+
+                            case 0b11000: {
+                                switch (static_cast<uint8_t>(dec.rs2()) & 0b11111) {
+                                    case 0b00000: return "fcvt.w.d";
+                                    case 0b00001: return "fcvt.wu.d";
+                                    case 0b00010: return "fcvt.l.d";
+                                    case 0b00011: return "fcvt.lu.d";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid fcvt.w[u].d rs2");
+                                }
+                                break;
+                            }
+
+                            case 0b11100: {
+                                switch (dec.funct() & 0b111) {
+                                    case 0b000: return "fmv.x.d";
+                                    case 0b001: return "fclass.d";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid funct fmv.x/fclass");
+                                }
+                                break;
+                            }
+
+                            case 0b10100: {
+                                switch (dec.funct() & 0b111) {
+                                    case 0b000: return "fle.d";
+                                    case 0b001: return "flt.d";
+                                    case 0b010: return "feq.d";
+                                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid f64 branch");
+                                }
+                                break;
+                            }
+
+                            case 0b11110: return "fmv.d.x";
+
+                            case 0b01000: {
+                                switch (static_cast<float_fmt>(dec.rs2())) {
+                                    case float_fmt::f32: return "fcvt.d.s";
+                                    default:
+                                        throw illegal_instruction(dec.pc(), dec.instr(), "invalid fconv f64 dst");
+                                }
+                                break;
+                            }
+
+                            case 0b11010: {
+                                switch (static_cast<uint8_t>(dec.rs2())) {
+                                    case 0b00000: return "fcvt.d.w";
+                                    case 0b00001: return "fcvt.d.wu";
+                                    case 0b00010: return "fcvt.d.l";
+                                    case 0b00011: return "fcvt.d.lu";
+                                    default:
+                                        throw illegal_instruction(dec.pc(), dec.instr(), "invalid fcvt.f f64");
+                                }
+                                break;
+                            }
+
+                            default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid f64 funct (fadd)");
+                        }
+                        break;
+                    }
+
+                    default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid float format (fadd)");
                 }
-                break;
             }
 
-            case opc::c_j: {
-                fmt::print(os, "c.j {:x} <{:+x}>", _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
-                break;
-            }
+            default:
+                throw illegal_instruction(dec.pc(), dec.instr(), "unkown regular opcode");
+        }
 
-            case opc::c_beqz: {
-                fmt::print(os, "c.beqz {}, {:x} <{:+x}>", _dec.rs1(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
-                break;
-            }
+        std::unreachable();
+    }
 
-            case opc::c_bnez: {
-                fmt::print(os, "c.bnez {}, {:x} <{:+x}>", _dec.rs1(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
-                break;
-            }
-            
-            case opc::c_slli: {
-                fmt::print(os, "c.slli {}, {}", _dec.rd(), _dec.imm());
-                break;
-            }
+    [[nodiscard]] std::string_view instr_name_compressed(const decoder& dec) {
+        switch (dec.opcode_compressed()) {
+            /* Q0 */
+            case opc::caddi4spn: return "c.addi4spn";
+            case opc::cfld:      return "c.fld";
+            case opc::clw:       return "c.lw";
+            case opc::cld:       return "c.ld";
+            case opc::cfsd:      return "c.fsd";
+            case opc::csw:       return "c.sw";
+            case opc::csd:       return "c.sd";
 
-            case opc::c_lwsp: {
-                fmt::print(os, "c.lwsp {}, {}(sp)", _dec.rd(), _dec.imm());
-                break;
-            }
+            /* Q1 */
+            case opc::caddi:     return "c.addi";
+            case opc::caddiw:    return "c.addiw";
+            case opc::cli:       return "c.li";
+            case opc::clui:
+                if (dec.rd() == reg::sp) {
+                    return "c.addi16sp";
+                } else {
+                    return "c.lui";
+                }
 
-            case opc::c_ldsp: {
-                fmt::print(os, "c.ldsp, {}, {}(sp)", _dec.rd(), _dec.imm());
-                break;
-            }
-
-            case opc::c_jr: {
-                auto r0 = static_cast<reg>((instr >> 2) & REG_MASK);
-                auto r1 = static_cast<reg>((instr >> 7) & REG_MASK);
-                if ((instr >> 12) & 0b1) {
-                    if (r0 == reg::zero) {
-                        if (r1 == reg::zero) {
-                            os << "c.ebreak";
+            case opc::csrli: {
+                switch ((dec.instr() >> 10) & 0b11) {
+                    case 0b00: return "c.srli";
+                    case 0b01: return "c.srai";
+                    case 0b10: return "c.andi";
+                    case 0b11:
+                        if (dec.instr() & (1 << 12)) {
+                            switch ((dec.instr() >> 5) & 0b11) {
+                                case 0b00: return "c.subw";
+                                case 0b01: return "c.addw";
+                                default: throw illegal_instruction(dec.pc(), dec.instr(), "invalid c.subw/c.addw formatting");
+                            }
                         } else {
-                            fmt::print(os, "c.jalr {}", r1);
+                            switch ((dec.instr() >> 5) & 0b11) {
+                                case 0b00: return "c.sub";
+                                case 0b01: return "c.xor";
+                                case 0b10: return "c.or";
+                                case 0b11: return "c.and";
+                            }
+                        }
+                }
+                
+                throw illegal_instruction(dec.pc(), dec.instr(), "invalid c.srli state");
+            }
+
+            case opc::cj:    return "c.j";
+            case opc::cbeqz: return "c.beqz";
+            case opc::cbnez: return "c.bnez";
+
+            /* Q2 */
+            case opc::cslli:  return "c.slli";
+            case opc::cfldsp: return "c.fldsp";
+            case opc::clwsp:  return "c.lwsp";
+            case opc::cldsp:  return "c.ldsp";
+
+            case opc::cjr: {
+                if (dec.funct()) {
+                    /* c.ebreak, c.jalr, c.add */
+                    if (dec.rs2() == reg::zero) {
+                        if (dec.rs1() == reg::zero) {
+                            return "c.ebreak";
+                        } else {
+                            return "c.jalr";
                         }
                     } else {
-                        fmt::print(os, "c.add {}, {}", r1, r0);
+                        return "c.add";
                     }
                 } else {
-                    if (r0 == reg::zero) {
-                        fmt::print(os, "c.jr {}", r1);
+                    /* c.jr, c.mv */
+                    if (dec.rs2() == reg::zero) {
+                        return "c.jr";
                     } else {
-                        fmt::print(os, "c.mv {}, {}", r1, r0);
+                        return "c.mv";
                     }
+                }
+            }
+
+            case opc::cfsdsp: return "c.fsdsp";
+            case opc::cswsp:  return "c.swsp";
+            case opc::csdsp:  return "c.sdsp";
+
+            default:
+                throw illegal_instruction(dec.pc(), dec.instr(), "unknown compressed opcode");
+        }
+
+        std::unreachable();
+    }
+}
+
+namespace arch::rv64 {
+    std::ostream& formatter::_format_compressed(std::ostream& os) const {
+        /* Store as uint32_t to prevent unexpected conversion */
+        uint32_t instr = _dec.instr();
+        fmt::print(os, "{:x}:  {:04x}       {}", _dec.pc(), instr, instr_name_compressed(_dec));
+        switch (_dec.ctype()) {
+            case compressed_type::CI: {
+                switch (_dec.opcode_compressed()) {
+                    case opc::cli:
+                    case opc::clui:
+                        fmt::print(os, "{}", _dec.simm());
+                        break;
+
+                    case opc::cfldsp:
+                    case opc::clwsp:
+                    case opc::cldsp:
+                    case opc::csdsp:
+                        fmt::print(os, "{}, {}({})", _dec.rd(), _dec.simm(), _dec.rs1());
+                        break;
+
+                    default:
+                        fmt::print(os, "{}, {}", _dec.rd(), _dec.simm());
                 }
                 break;
             }
 
-            case opc::c_sdsp: {
-                fmt::print(os, "c.sdsp {}, {}(sp)", _dec.rd(), _dec.imm());
+            case compressed_type::CR: {
+                if (_dec.rs1() != reg::zero && _dec.rs2() != reg::zero) {
+                    /* c.add */
+                    fmt::print(os, "{}, {}", _dec.rs1(), _dec.rs2());
+                } else if (_dec.rs1() != reg::zero && _dec.rs2() == reg::zero) {
+                    /* c.jr */
+                    fmt::print(os, "{}", _dec.rs1());
+                } else if (_dec.rd() != reg::zero && _dec.rs2() != reg::zero) {
+                    /* c.mv */
+                    fmt::print(os, "{}, {}", _dec.rd(), _dec.rs2());
+                } else {
+                    throw illegal_instruction(_dec.pc(), _dec.instr(), "c.jr/c.mv/c.ebreak/c.jalr formatting");
+                }
+                break;
+            }
+
+            case compressed_type::CB: {
+                fmt::print(os, "{}, {:#}", _dec.rs1(), _dec.simm());
+                break;
+            }
+
+            case compressed_type::CS:
+            case compressed_type::CSS: {
+                fmt::print(os, "{}, {}({})", _dec.rs2(), _dec.simm(), _dec.rs1());
+                break;
+            }
+
+            case compressed_type::CL: {
+                fmt::print(os, "{}, {}({})", _dec.rd(), _dec.simm(), _dec.rs1());
+                break;
+            }
+
+            case compressed_type::CA: {
+                switch ((_dec.instr() >> 10) & 0b11) {
+                    case 0b00:
+                    case 0b01:
+                    case 0b10:
+                        fmt::print(os, "{}, {}", _dec.rd(), _dec.simm());
+                        break;
+                        
+                    case 0b11:
+                        fmt::print(os, "{}, {}", _dec.rd(), _dec.rs2());
+                        break;
+                }
+                break;
+            }
+
+            case compressed_type::CIW: {
+                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.simm());
+                break;
+            }
+
+            case compressed_type::CJ: {
+                fmt::print(os, "{:#}", _dec.simm());
                 break;
             }
 
             default:
-                throw illegal_compressed_instruction(_dec.pc(), _dec.instr(), "formatter::print::compressed");
-        }
+                throw illegal_instruction(_dec.pc(), _dec.instr(), "unknown compressed instruction type");
+        }        
 
         return os;
     }
@@ -284,59 +575,75 @@ namespace arch::rv64 {
             return os;
         }
 
-        os << _instr_name() << ' ';
+        fmt::print(os, "{}", instr_name_regular(_dec));
 
         switch (_dec.type()) {
-            case instr_type::I: {
-                uint64_t imm = _dec.imm();
+            case instr_type::I:
                 switch (_dec.opcode()) {
                     case opc::jalr:
-                    case opc::load: {
-                        fmt::print(os, "{}, {}({})", _dec.rd(), int64_t(imm), _dec.rs1());
+                    case opc::load:
+                    case opc::fload:
+                        fmt::print(os, "{}, {}({})", _dec.rd(), _dec.simm(), _dec.rs1());
                         break;
-                    }
 
-                    case opc::fence: {
-                        fmt::print(os, "{:#x}", imm);
-                        break;
-                    }
-
-                    case opc::addi: {
-                        if (_dec.funct() == 0b101) {
-                            imm &= 0b111111;
+                    case opc::addi:
+                    case opc::addiw:
+                        if (_dec.imm() & ~0b111111) {
+                            /* Shifts */
+                            fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.imm() & 0b111111);
+                            break;
                         }
                         [[fallthrough]];
-                    }
 
-                    default: {
-                        fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), int64_t(imm));
-                    }
+                    default:
+                        fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.simm());
                 }
-                break;
-            }
-
-            case instr_type::S:
-                fmt::print(os, "{}, {}({})", _dec.rs2(), int64_t(_dec.imm()), _dec.rs1());
-                break;
-
-            case instr_type::J:
-                fmt::print(os, "{}, {:x} <{:+x}>", _dec.rd(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
                 break;
 
             case instr_type::R:
-                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.rs2());
+                switch (_dec.opcode()) {
+                    case opc::fadd:
+                        /* If this bit is set, only  rs1 is used */
+                        if ((_dec.funct() >> 8) & 1) {
+                            fmt::print(os, "{}, {}", _dec.rd(), _dec.rs1());
+                            break;
+                        }
+
+                        [[fallthrough]];
+
+                    default:
+                        fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.rs2());
+                }
+                
                 break;
 
             case instr_type::U:
-                fmt::print(os, "{}, {:#x}", _dec.rd(), _dec.imm());
+                fmt::print(os, "{}, {}", _dec.rd(), _dec.simm());
+                break;
+
+            case instr_type::J:
+                fmt::print(os, "{}, {:#}", _dec.rd(), _dec.simm());
+                break;
+
+            case instr_type::S:
+                fmt::print(os, "{}, {}({})", _dec.rs2(), _dec.simm(), _dec.rs1());
                 break;
 
             case instr_type::B:
-                fmt::print(os, "{}, {}, {:x} <{:+x}>", _dec.rs1(), _dec.rs2(), _dec.pc() + int64_t(_dec.imm()), int64_t(_dec.imm()));
+                fmt::print(os, "{}, {}, {:#}", _dec.rs1(), _dec.rs2(), _dec.simm());
+                break;
+
+            case instr_type::R4:
+                fmt::print(os, "{}, {}, {}, {}", _dec.rd(), _dec.rs1(), _dec.rs2(), _dec.rs3());
                 break;
 
             default:
-                throw illegal_instruction(_dec.pc(), _dec.instr(), "formatter::print::args");
+                throw illegal_instruction(_dec.pc(), _dec.instr(), "unknown instruction type");
+        }
+
+        /* If it's a float instruction, rounding mode shouldn't be invalidated yet by this point */
+        if ((_dec.rm() & rounding_mode::invalid_mask) != rounding_mode::invalid_mask) {
+            fmt::print(os, ", {}", _dec.rm());
         }
 
         return os;

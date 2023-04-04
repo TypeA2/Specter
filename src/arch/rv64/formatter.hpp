@@ -10,8 +10,6 @@ namespace arch::rv64 {
         decoder& _dec;
         regfile& _reg;
 
-        [[nodiscard]] std::string_view _instr_name() const;
-
         std::ostream& _format_compressed(std::ostream& os) const;
         std::ostream& _format_full(std::ostream& os) const;
 

@@ -40,7 +40,7 @@ namespace arch::rv64 {
     };
 
     enum class instr_type {
-        R, I, S, B, U, J
+        R, I, S, B, U, J, R4,
     };
 
     enum class compressed_type {
@@ -54,47 +54,103 @@ namespace arch::rv64 {
         a0, a1, a2, a3, a4, a5, a6, a7,
         s2, s3, s4, s5, s6, s7, s8, s9, s10, s11,
         t3, t4, t5, t6,
+
+        /* Treat float registers as an extension to the normal register set */
+        ft0, ft1, ft2, ft3, ft4, ft5, ft6, ft7,
+        fs0, fs1,
+        fa0, fa1, fa2, fa3, fa4, fa5, fa6, fa7,
+        fs2, fs3, fs4, fs5, fs6, fs7, fs8, fs9, fs10, fs11,
+        ft8, ft9, ft10, ft11,
+
+        float_mask = ft0,
+    };
+
+    /* Represents the fmt field for floating-point instructions */
+    enum class float_fmt : uint8_t {
+        f32  = 0b00,
+        f64  = 0b01,
+        f16  = 0b10,
+        f128 = 0b11,
+    };
+
+    /* Represents the rm field in an applicable floating-point instruction */
+    enum class rounding_mode : uint8_t {
+        rne = 0b0000,
+        rtz = 0b0001,
+        rdn = 0b0010,
+        rup = 0b0011,
+        rmm = 0b0100,
+        dyn = 0b0111,
+
+        invalid_mask = 0b1000,
+    };
+
+    /* Represents the 3-bit funct field on branching instructions */
+    enum class branch_comp : uint8_t {
+        eq  = 0b000,
+        ne  = 0b001,
+        lt  = 0b100,
+        ge  = 0b101,
+        ltu = 0b110,
+        geu = 0b111,
+
+        none = 0b11111111,
     };
 
     enum class opc : uint8_t {
-        /* RV64IM */
-        lui        = 0b0110111,
-        auipc      = 0b0010111,
-        jal        = 0b1101111,
-        jalr       = 0b1100111,
-        branch     = 0b1100011,
-        load       = 0b0000011,
-        store      = 0b0100011,
-        addi       = 0b0010011,
-        add        = 0b0110011,
-        ecall      = 0b1110011,
-        addiw      = 0b0011011,
-        addw       = 0b0111011,
-        fence      = 0b0001111,
+        lui    = 0b0110111, /* U */
+        auipc  = 0b0010111, /* U */
+        jal    = 0b1101111, /* J */
+        jalr   = 0b1100111, /* I */
+        branch = 0b1100011, /* B */
+        load   = 0b0000011, /* I */
+        store  = 0b0100011, /* S */
+        addi   = 0b0010011, /* I */
+        addiw  = 0b0011011, /* I */
+        add    = 0b0110011, /* R */
+        addw   = 0b0111011, /* R */
+        ecall  = 0b1110011, /* I */
+
+        fload  = 0b0000111, /* I  */
+        fstore = 0b0100111, /* S  */
+        fmadd  = 0b1000011, /* R4 */
+        fmsub  = 0b1000111, /* R4 */
+        fnmsub = 0b1001011, /* R4 */
+        fnmadd = 0b1001111, /* R4 */
+        fadd   = 0b1010011, /* R  */
+
+        /* First 2 bits of a compressed instruction never match those of a
+         * regular instruction, meaning they can share an enum
+         */
 
         /* RVC Q0 */
-        c_addi4spn = 0b0000000,
-        c_lw       = 0b0001000,
-        c_ld       = 0b0001100,
-        c_sw       = 0b0011000,
-        c_sd       = 0b0011100,
+        caddi4spn = 0b00000, /* CIW: c.addi4spn */
+        cfld      = 0b00100, /* CL: c.fld */
+        clw       = 0b01000, /* CL: c.lw  */
+        cld       = 0b01100, /* CL: c.ld  */
+        cfsd      = 0b10100, /* CS: c.fsd */
+        csw       = 0b11000, /* CS: c.sw  */
+        csd       = 0b11100, /* CS: c.sd  */
 
         /* RVC Q1 */
-        c_nop      = 0b0000001,
-        c_addiw    = 0b0000101,
-        c_li       = 0b0001001,
-        c_addi16sp = 0b0001101,
-        c_srli     = 0b0010001,
-        c_j        = 0b0010101,
-        c_beqz     = 0b0011001,
-        c_bnez     = 0b0011101,
+        caddi  = 0b00001, /* CI: c.nop, c.addi */
+        caddiw = 0b00101, /* CI: c.addiw */
+        cli    = 0b01001, /* CI: c.li    */
+        clui   = 0b01101, /* CI: c.lui   */
+        csrli  = 0b10001, /* CA: c.subw  */
+        cj     = 0b10101, /* CJ: c.j     */
+        cbeqz  = 0b11001, /* CB: c.beqz  */
+        cbnez  = 0b11101, /* CB: c.bnez  */
 
         /* RVC Q2 */
-        c_slli     = 0b0000010,
-        c_lwsp     = 0b0001010,
-        c_ldsp     = 0b0001110,
-        c_jr       = 0b0010010,
-        c_sdsp     = 0b0011110,
+        cslli  = 0b00010, /* CI: c.slli  */
+        cfldsp = 0b00110, /* CI: c.fldsp */
+        clwsp  = 0b01010, /* CI: c.lwsp  */
+        cldsp  = 0b01110, /* CI: c.ldsp  */
+        cjr    = 0b10010, /* CR: c.jr, c.mv, c.ebreak, c.jalr, c.add */
+        cfsdsp = 0b10110, /* CSS: c.fsdsp */
+        cswsp  = 0b11010, /* CSS: c.swsp  */
+        csdsp  = 0b11110, /* CSS: c.sdsp  */
     };
 
     /* https://github.com/bminor/glibc/blob/master/sysdeps/unix/sysv/linux/riscv/rv64/arch-syscall.h */
@@ -106,29 +162,122 @@ namespace arch::rv64 {
         mmap = 222,
     };
 
-    enum class alu_op {
+    /* Input data source for the ALU */
+    enum class alu_input {
+        invalid,
+        
+        reg, imm, pc,
+    };
+
+    enum class alu_op : uint16_t {
         invalid,
 
-        nop,
-        
-        /* Use ALU as a muxer */
-        forward_a, forward_b,
+        add, sub,
 
-        /* Arithmetics*/
-        add, sub, div, divu, mul, rem, remu,
+        mul, div, divu, rem, remu,
 
-        addw, subw,
+        mulh, mulhsu, mulhu,
 
-        /* Comparisons */
-        eq, ne, lt, ge, ltu, geu,
-
-        /* Bitwise */
-        bitwise_xor, bitwise_or, bitwise_and,
-
-        /* Shifts */
         sll, srl, sra,
 
-        sllw, srlw, sraw,
+        /* A lot of the common names for these are reserved, so this will have to do */
+        bxor, bor, band,
+
+        slt, sltu,
+
+        /* Convert float or double to XLEN int */
+        fcvts, fcvtsu, fcvtd, fcvtdu,
+
+        /* Float comparisons, integer output */
+        fle, flt, feq,
+
+        /* Classify float, integer output */
+        fclass,
+
+        /* Float instructions, word_op variants work with 32-bit floats */
+        float_op = 0b01000000,
+
+        madd, msub, nmadd, nmsub,
+
+        fadd, fsub, fmul, fdiv,
+
+        fsqrt,
+
+        fsgnj, fsgnjn, fsgnjx,
+
+        fmin, fmax,
+
+        /* Move integer register to float, this doesn't use `add` so the NaN-boxing logic picks it up */
+        fmv,
+
+        /* f32 <-> f64 conversion */
+        fconv,
+
+        /* Convert XLEN int to float or double */
+        fcvtw, fcvtwu, fcvtl, fcvtlu,
+
+        /* 32-bit versions */
+        word_op = 0b10000000,
+
+        addw  = add  | word_op,
+        subw  = sub  | word_op,
+        mulw  = mul  | word_op,
+        divw  = div  | word_op,
+        divuw = divu | word_op,
+        remw  = rem  | word_op,
+        remuw = remu | word_op,
+        sllw  = sll  | word_op,
+        srlw  = srl  | word_op,
+        sraw  = sra  | word_op,
+
+        fcvtsw  = fcvts  | word_op,
+        fcvtsuw = fcvtsu | word_op,
+        fcvtdw  = fcvtd  | word_op,
+        fcvtduw = fcvtdu | word_op,
+
+        fles    = fle    | word_op,
+        flts    = flt    | word_op,
+        feqs    = feq    | word_op,
+        fclasss = fclass | word_op,
+
+        /* Single-precision */
+        madds   = madd   | word_op,
+        msubs   = msub   | word_op,
+        nmadds  = nmadd  | word_op,
+        nmsubs  = nmsub  | word_op,
+        fadds   = fadd   | word_op,
+        fsubs   = fsub   | word_op,
+        fmuls   = fmul   | word_op,
+        fdivs   = fdiv   | word_op,
+        fsqrts  = fsqrt  | word_op,
+        fsgnjs  = fsgnj  | word_op,
+        fsgnjns = fsgnjn | word_op,
+        fsgnjxs = fsgnjx | word_op,
+        fmins   = fmin   | word_op,
+        fmaxs   = fmax   | word_op,
+        fmvs    = fmv    | word_op,
+        fconvs  = fconv  | word_op,
+        fcvtws  = fcvtw  | word_op,
+        fcvtwus = fcvtwu | word_op,
+        fcvtls  = fcvtl  | word_op,
+        fcvtlus = fcvtlu | word_op,
+    };
+
+    /* Memory access type */
+    enum class mem_size : uint8_t {
+        s64 = 0b0011,
+        s32 = 0b0010,
+        s16 = 0b0001,
+        s8  = 0b0000,
+        
+        u64 = 0b0111,
+        u32 = 0b0110,
+        u16 = 0b0101,
+        u8  = 0b0100,
+
+        float_mask = 0b1000,
+        f32 = 0b1010,
+        f64 = 0b1011,
     };
 
     /* instr & MASK_OPCODE_COMPRESSED == OPC_FULL_SIZE means 32-bit instr, else 16-bit */
@@ -137,7 +286,10 @@ namespace arch::rv64 {
     /* Commonly used mask for register numbers */
     static constexpr uint32_t REG_MASK = 0b11111;
 
-    inline reg parse_reg(std::string_view str)  {
+    /* Regular instruction opcode mask */
+    static constexpr uint32_t OPCODE_MASK = 0b1111111;
+
+    [[nodiscard]] inline reg parse_reg(std::string_view str)  {
         std::optional<reg> res;
         if (str.starts_with('x')) {
             int val;
@@ -155,6 +307,20 @@ namespace arch::rv64 {
 
         throw std::runtime_error(fmt::format("invalid register: {}", str));
     }
+
+    [[nodiscard]] inline constexpr size_t mem_size_bytes(mem_size s) {
+        /* Encoded by exponent */
+        return 1 << (static_cast<uint8_t>(s) & 0b11);
+    }
+
+    [[nodiscard]] inline constexpr bool mem_size_signed(mem_size s) {
+        /* Upper funct bit encodes whether to zero-extend or sign-extend */
+        return !(static_cast<uint8_t>(s) & 0b100);
+    }
+
+    [[nodiscard]] inline constexpr bool mem_size_float(mem_size s) {
+        return static_cast<uint8_t>(s) & static_cast<uint8_t>(mem_size::float_mask);
+    }
 }
 
 template <typename T> requires std::is_enum_v<T>
@@ -171,3 +337,8 @@ template <> struct fmt::formatter<arch::rv64::reg>             : fmt_enum<arch::
 template <> struct fmt::formatter<arch::rv64::opc>             : fmt_enum<arch::rv64::opc>             { };
 template <> struct fmt::formatter<arch::rv64::syscall>         : fmt_enum<arch::rv64::syscall>         { };
 template <> struct fmt::formatter<arch::rv64::alu_op>          : fmt_enum<arch::rv64::alu_op>          { };
+template <> struct fmt::formatter<arch::rv64::alu_input>       : fmt_enum<arch::rv64::alu_input>       { };
+template <> struct fmt::formatter<arch::rv64::branch_comp>     : fmt_enum<arch::rv64::branch_comp>     { };
+template <> struct fmt::formatter<arch::rv64::mem_size>        : fmt_enum<arch::rv64::mem_size>        { };
+template <> struct fmt::formatter<arch::rv64::float_fmt>       : fmt_enum<arch::rv64::float_fmt>       { };
+template <> struct fmt::formatter<arch::rv64::rounding_mode>   : fmt_enum<arch::rv64::rounding_mode>   { };

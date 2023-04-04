@@ -14,6 +14,10 @@
 #include <fmt/chrono.h>
 
 #include <arch/arch.hpp>
+#include <arch/rv64/rv64.hpp>
+#include <arch/rv64/decoder.hpp>
+#include <arch/rv64/formatter.hpp>
+#include <arch/rv64/regfile.hpp>
 #include <util/elf_file.hpp>
 
 namespace fs = std::filesystem;
@@ -72,8 +76,6 @@ struct specter_options {
 int main(int argc, char** argv) {
     auto opts = specter_options::parse(argc, argv);
 
-    int res = 0;
-
     try {
         elf_file elf { opts.executable };
 
@@ -81,21 +83,27 @@ int main(int argc, char** argv) {
         uintptr_t text_addr = elf.section_address(".text");
         auto text_align = elf.section(".text").sh_addralign;
 
-        fmt::print("{}-byte .text at {:x} aligned to {}\n", text_data.size(), text_addr, text_align);
+        arch::rv64::decoder dec;
+        arch::rv64::regfile reg;
+        arch::rv64::formatter fmt(dec, reg);
+
+        dec.set_instr(text_addr, *(uint32_t*)(text_data.data()));
+
+        fmt::print(std::cerr, "{}\n", fmt.instr());
+
+        return EXIT_SUCCESS;
         
     } catch (invalid_file& e) {
         fmt::print(std::cerr, "invalid executable file: {}\n", e.what());
         return EXIT_FAILURE;
     } catch (arch::illegal_instruction& e) {
         fmt::print(std::cerr, "illegal_instruction: {}\n", e.what());
-        res = EXIT_FAILURE;
+        return EXIT_FAILURE;
     } catch (arch::invalid_syscall& e) {
         fmt::print(std::cerr, "invalid syscall: {}\n", e.what());
-        res = EXIT_FAILURE;
+        return EXIT_FAILURE;
     } catch (arch::illegal_operation& e) {
         fmt::print(std::cerr, "illegal operation: {}\n", e.what());
-        res = EXIT_FAILURE;
+        return EXIT_FAILURE;
     }
-
-    return res;
 }
