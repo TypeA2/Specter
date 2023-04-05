@@ -17,7 +17,6 @@
 #include <arch/rv64/rv64.hpp>
 #include <arch/rv64/decoder.hpp>
 #include <arch/rv64/formatter.hpp>
-#include <arch/rv64/regfile.hpp>
 #include <util/elf_file.hpp>
 
 namespace fs = std::filesystem;
@@ -73,6 +72,8 @@ struct specter_options {
     }
 };
 
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+
 int main(int argc, char** argv) {
     auto opts = specter_options::parse(argc, argv);
 
@@ -81,15 +82,19 @@ int main(int argc, char** argv) {
 
         auto text_data = elf.section_data(".text");
         uintptr_t text_addr = elf.section_address(".text");
-        auto text_align = elf.section(".text").sh_addralign;
 
-        arch::rv64::decoder dec;
-        arch::rv64::regfile reg;
-        arch::rv64::formatter fmt(dec, reg);
+        auto instructions = arch::rv64::decoder::ingest(text_addr, text_data);
 
-        dec.set_instr(text_addr, *(uint32_t*)(text_data.data()));
-
-        fmt::print(std::cerr, "{}\n", fmt.instr());
+        for (const auto& instr : instructions) {
+            std::visit(overloaded {
+                [] <std::unsigned_integral T> (arch::rv64::decoder::udata<T> arg) {
+                    fmt::print(std::cerr, "{:x}:  {:0{}x}\n", arg.pc, arg.val, sizeof(T) * 2);
+                },
+                [](const arch::rv64::decoder& dec) {
+                    fmt::print(std::cerr, "{}\n", dec);
+                }
+            }, instr);
+        }
 
         return EXIT_SUCCESS;
         

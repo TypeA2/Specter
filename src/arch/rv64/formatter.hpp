@@ -1,39 +1,23 @@
 #pragma once
 
-#include <sstream>
+#include "decoder.hpp"
+
+#include <ostream>
+
+#include <fmt/ostream.h>
 
 namespace arch::rv64 {
-    class decoder;
-    class regfile;
+    std::ostream& format(std::ostream& os, const decoder& dec);
+    std::ostream& format(std::ostream& os, uintptr_t pc, uint16_t instr);
+    std::ostream& format(std::ostream& os, uintptr_t pc, uint32_t instr);
 
-    class formatter {
-        decoder& _dec;
-        regfile& _reg;
+    /* Helpers to make formatting more natural */
+    [[nodiscard]] inline decoder format(uintptr_t pc, uint16_t instr) { return decoder { pc, instr }; }
+    [[nodiscard]] inline decoder format(uintptr_t pc, uint32_t instr) { return decoder { pc, instr }; }
 
-        std::ostream& _format_compressed(std::ostream& os) const;
-        std::ostream& _format_full(std::ostream& os) const;
-
-        [[nodiscard]] bool _format_if_pseudo(std::ostream& os) const;
-
-        public:
-        formatter(decoder& dec, regfile& reg) : _dec { dec }, _reg { reg } { }
-
-        std::ostream& instr(std::ostream& os) const;
-
-        std::string instr() const {
-            std::stringstream ss;
-            instr(ss);
-
-            return ss.str();
-        }
-
-        std::ostream& regs(std::ostream& os) const;
-
-        std::string regs() const {
-            std::stringstream ss;
-            regs(ss);
-
-            return ss.str();
-        }
-    };
+    inline std::ostream& operator<<(std::ostream& os, const decoder& dec) {
+        return format(os, dec);
+    }
 }
+
+template <> struct fmt::formatter<arch::rv64::decoder> : ostream_formatter { };

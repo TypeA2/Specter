@@ -8,25 +8,59 @@
 using namespace magic_enum::bitwise_operators;
 
 namespace arch::rv64 {
-    /* Copied and adapted from TypeA2/rv64-emu-doom's decoder */
-    void decoder::set_instr(uintptr_t pc, uint32_t instr) {
-        clear_instr();
+    std::vector<decoder::ingested_instruction> decoder::ingest(uintptr_t pc, std::span<const std::byte> data) {
+        std::vector<ingested_instruction> res;
 
-        _pc = pc;
-        _instr = instr;
+        res.reserve(data.size() / 2);
 
-        if (compressed(_instr)) {
-            _decode_compressed();
-        } else {
-            _decode_regular();
+        std::span<const uint16_t> instr_data { reinterpret_cast<const uint16_t*>(data.data()), data.size() / 2 };
+
+        for (auto it = instr_data.begin(); it != instr_data.end(); ++it) {
+            if (*it) {
+                if (decoder::compressed(*it)) {
+                    try {
+                        decoder dec { pc, *it };
+                        res.push_back(std::move(dec));
+                    } catch (const illegal_compressed_instruction&) {
+                        res.push_back(udata<uint16_t> { pc, *it });
+                    }
+
+                    pc += 2;
+                } else {
+
+                    try {
+                        uint32_t lo = *it++;
+                        decoder dec { pc, lo | (*it << 16) };
+                        res.push_back(std::move(dec));
+                    } catch (const illegal_instruction&) {
+                        res.push_back(udata<uint16_t> { pc, *it });
+                    }
+
+                    pc += 4;
+                }
+            } else {
+                /* Concatenate 2-byte zeroes into 4-byte zeroes */
+                res.push_back(udata<uint16_t> { pc, 0 });
+                pc += 2;
+            }
         }
+
+        if ((data.size() % 2) == 1) {
+            res.push_back(udata<uint8_t> { pc, 0 });
+        }
+
+        return res;
     }
 
-    void decoder::clear_instr() {
-        /* All relevant fields are zero-initialized */
-        *this = decoder{};
+    decoder::decoder(uintptr_t pc, uint16_t instr) : _pc { pc }, _instr { instr } {
+        _decode_compressed();
+    }
+    
+    decoder::decoder(uintptr_t pc, uint32_t instr) : _pc { pc }, _instr { instr } {
+        _decode_regular();
     }
 
+    /* Copied and adapted from TypeA2/rv64-emu-doom's decoder */
     void decoder::_decode_compressed() {
         _compressed = true;
 

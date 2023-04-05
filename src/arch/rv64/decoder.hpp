@@ -4,6 +4,9 @@
 
 #include "alu.hpp"
 
+#include <vector>
+#include <variant>
+
 namespace arch::rv64 {
     class decoder {
         uintptr_t _pc{};
@@ -56,8 +59,18 @@ namespace arch::rv64 {
         void _decode_cj();
 
         public:
-        void set_instr(uintptr_t pc, uint32_t instr);
-        void clear_instr();
+        /* Load an array of decoder from the input data */
+        template <std::unsigned_integral T>
+        struct udata {
+            uintptr_t pc;
+            T val;
+        };
+
+        using ingested_instruction = std::variant<udata<uint8_t>, udata<uint16_t>, udata<uint32_t>, decoder>;
+        [[nodiscard]] static std::vector<ingested_instruction> ingest(uintptr_t pc, std::span<const std::byte> data);
+
+        explicit decoder(uintptr_t pc, uint16_t half);
+        explicit decoder(uintptr_t pc, uint32_t instr);
 
         [[nodiscard]] uintptr_t pc() const { return _pc; }
         [[nodiscard]] uint32_t instr() const { return _instr; }

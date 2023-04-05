@@ -1,7 +1,6 @@
 #include "formatter.hpp"
 
 #include "decoder.hpp"
-#include "regfile.hpp"
 
 #include <fmt/ostream.h>
 
@@ -476,305 +475,212 @@ namespace {
 
         std::unreachable();
     }
-}
 
-namespace arch::rv64 {
-    std::ostream& formatter::_format_compressed(std::ostream& os) const {
+    std::ostream& format_compressed(std::ostream& os, const decoder& dec) {
         /* Store as uint32_t to prevent unexpected conversion */
-        uint32_t instr = _dec.instr();
-        fmt::print(os, "{:x}:  {:04x}       {}", _dec.pc(), instr, instr_name_compressed(_dec));
-        switch (_dec.ctype()) {
+        uint32_t instr = dec.instr();
+        fmt::print(os, "{:x}:  {:04x}       {} ", dec.pc(), instr, instr_name_compressed(dec));
+        switch (dec.ctype()) {
             case compressed_type::CI: {
-                switch (_dec.opcode_compressed()) {
+                switch (dec.opcode_compressed()) {
                     case opc::cli:
                     case opc::clui:
-                        fmt::print(os, "{}", _dec.simm());
+                        fmt::print(os, "{}", dec.simm());
                         break;
 
                     case opc::cfldsp:
                     case opc::clwsp:
                     case opc::cldsp:
                     case opc::csdsp:
-                        fmt::print(os, "{}, {}({})", _dec.rd(), _dec.simm(), _dec.rs1());
+                        fmt::print(os, "{}, {}({})", dec.rd(), dec.simm(), dec.rs1());
                         break;
 
                     default:
-                        fmt::print(os, "{}, {}", _dec.rd(), _dec.simm());
+                        fmt::print(os, "{}, {}", dec.rd(), dec.simm());
                 }
                 break;
             }
 
             case compressed_type::CR: {
-                if (_dec.rs1() != reg::zero && _dec.rs2() != reg::zero) {
+                if (dec.rs1() != reg::zero && dec.rs2() != reg::zero) {
                     /* c.add */
-                    fmt::print(os, "{}, {}", _dec.rs1(), _dec.rs2());
-                } else if (_dec.rs1() != reg::zero && _dec.rs2() == reg::zero) {
+                    fmt::print(os, "{}, {}", dec.rs1(), dec.rs2());
+                } else if (dec.rs1() != reg::zero && dec.rs2() == reg::zero) {
                     /* c.jr */
-                    fmt::print(os, "{}", _dec.rs1());
-                } else if (_dec.rd() != reg::zero && _dec.rs2() != reg::zero) {
+                    fmt::print(os, "{}", dec.rs1());
+                } else if (dec.rd() != reg::zero && dec.rs2() != reg::zero) {
                     /* c.mv */
-                    fmt::print(os, "{}, {}", _dec.rd(), _dec.rs2());
+                    fmt::print(os, "{}, {}", dec.rd(), dec.rs2());
                 } else {
-                    throw illegal_instruction(_dec.pc(), _dec.instr(), "c.jr/c.mv/c.ebreak/c.jalr formatting");
+                    throw illegal_instruction(dec.pc(), dec.instr(), "c.jr/c.mv/c.ebreak/c.jalr formatting");
                 }
                 break;
             }
 
             case compressed_type::CB: {
-                fmt::print(os, "{}, {:#}", _dec.rs1(), _dec.simm());
+                fmt::print(os, "{}, {:#}", dec.rs1(), dec.simm());
                 break;
             }
 
             case compressed_type::CS:
             case compressed_type::CSS: {
-                fmt::print(os, "{}, {}({})", _dec.rs2(), _dec.simm(), _dec.rs1());
+                fmt::print(os, "{}, {}({})", dec.rs2(), dec.simm(), dec.rs1());
                 break;
             }
 
             case compressed_type::CL: {
-                fmt::print(os, "{}, {}({})", _dec.rd(), _dec.simm(), _dec.rs1());
+                fmt::print(os, "{}, {}({})", dec.rd(), dec.simm(), dec.rs1());
                 break;
             }
 
             case compressed_type::CA: {
-                switch ((_dec.instr() >> 10) & 0b11) {
+                switch ((dec.instr() >> 10) & 0b11) {
                     case 0b00:
                     case 0b01:
                     case 0b10:
-                        fmt::print(os, "{}, {}", _dec.rd(), _dec.simm());
+                        fmt::print(os, "{}, {}", dec.rd(), dec.simm());
                         break;
                         
                     case 0b11:
-                        fmt::print(os, "{}, {}", _dec.rd(), _dec.rs2());
+                        fmt::print(os, "{}, {}", dec.rd(), dec.rs2());
                         break;
                 }
                 break;
             }
 
             case compressed_type::CIW: {
-                fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.simm());
+                fmt::print(os, "{}, {}, {}", dec.rd(), dec.rs1(), dec.simm());
                 break;
             }
 
             case compressed_type::CJ: {
-                fmt::print(os, "{:#}", _dec.simm());
+                fmt::print(os, "{:#}", dec.simm());
                 break;
             }
 
             default:
-                throw illegal_instruction(_dec.pc(), _dec.instr(), "unknown compressed instruction type");
+                throw illegal_instruction(dec.pc(), dec.instr(), "unknown compressed instruction type");
         }        
 
         return os;
     }
 
-    std::ostream& formatter::_format_full(std::ostream& os) const {
-         fmt::print(os, "{:x}:  {:08x}   ", _dec.pc(), _dec.instr());
+    std::ostream& format_full(std::ostream& os, const decoder& dec) {
+         fmt::print(os, "{:x}:  {:08x}   ", dec.pc(), dec.instr());
 
-        if (_format_if_pseudo(os)) {
-            return os;
-        }
+        // if (format_if_pseudo(os)) {
+        //     return os;
+        // }
 
-        fmt::print(os, "{}", instr_name_regular(_dec));
+        fmt::print(os, "{} ", instr_name_regular(dec));
 
-        switch (_dec.type()) {
+        switch (dec.type()) {
             case instr_type::I:
-                switch (_dec.opcode()) {
+                switch (dec.opcode()) {
                     case opc::jalr:
                     case opc::load:
                     case opc::fload:
-                        fmt::print(os, "{}, {}({})", _dec.rd(), _dec.simm(), _dec.rs1());
+                        fmt::print(os, "{}, {}({})", dec.rd(), dec.simm(), dec.rs1());
                         break;
 
                     case opc::addi:
                     case opc::addiw:
-                        if (_dec.imm() & ~0b111111) {
+                        if (dec.imm() & ~0b111111) {
                             /* Shifts */
-                            fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.imm() & 0b111111);
+                            fmt::print(os, "{}, {}, {}", dec.rd(), dec.rs1(), dec.imm() & 0b111111);
                             break;
                         }
                         [[fallthrough]];
 
                     default:
-                        fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.simm());
+                        fmt::print(os, "{}, {}, {}", dec.rd(), dec.rs1(), dec.simm());
                 }
                 break;
 
             case instr_type::R:
-                switch (_dec.opcode()) {
+                switch (dec.opcode()) {
                     case opc::fadd:
                         /* If this bit is set, only  rs1 is used */
-                        if ((_dec.funct() >> 8) & 1) {
-                            fmt::print(os, "{}, {}", _dec.rd(), _dec.rs1());
+                        if ((dec.funct() >> 8) & 1) {
+                            fmt::print(os, "{}, {}", dec.rd(), dec.rs1());
                             break;
                         }
 
                         [[fallthrough]];
 
                     default:
-                        fmt::print(os, "{}, {}, {}", _dec.rd(), _dec.rs1(), _dec.rs2());
+                        fmt::print(os, "{}, {}, {}", dec.rd(), dec.rs1(), dec.rs2());
                 }
                 
                 break;
 
             case instr_type::U:
-                fmt::print(os, "{}, {}", _dec.rd(), _dec.simm());
+                fmt::print(os, "{}, {}", dec.rd(), dec.simm());
                 break;
 
             case instr_type::J:
-                fmt::print(os, "{}, {:#}", _dec.rd(), _dec.simm());
+                fmt::print(os, "{}, {:#}", dec.rd(), dec.simm());
                 break;
 
             case instr_type::S:
-                fmt::print(os, "{}, {}({})", _dec.rs2(), _dec.simm(), _dec.rs1());
+                fmt::print(os, "{}, {}({})", dec.rs2(), dec.simm(), dec.rs1());
                 break;
 
             case instr_type::B:
-                fmt::print(os, "{}, {}, {:#}", _dec.rs1(), _dec.rs2(), _dec.simm());
+                fmt::print(os, "{}, {}, {:#}", dec.rs1(), dec.rs2(), dec.simm());
                 break;
 
             case instr_type::R4:
-                fmt::print(os, "{}, {}, {}, {}", _dec.rd(), _dec.rs1(), _dec.rs2(), _dec.rs3());
+                fmt::print(os, "{}, {}, {}, {}", dec.rd(), dec.rs1(), dec.rs2(), dec.rs3());
                 break;
 
             default:
-                throw illegal_instruction(_dec.pc(), _dec.instr(), "unknown instruction type");
+                throw illegal_instruction(dec.pc(), dec.instr(), "unknown instruction type");
         }
 
         /* If it's a float instruction, rounding mode shouldn't be invalidated yet by this point */
-        if ((_dec.rm() & rounding_mode::invalid_mask) != rounding_mode::invalid_mask) {
-            fmt::print(os, ", {}", _dec.rm());
+        if ((dec.rm() & rounding_mode::invalid_mask) != rounding_mode::invalid_mask) {
+            fmt::print(os, ", {}", dec.rm());
         }
 
         return os;
     }
+}
 
-    bool formatter::_format_if_pseudo(std::ostream& os) const {
-        switch (_dec.opcode()) {
-            case opc::jal: {
-                auto imm = _dec.imm();
-                if (_dec.rd() == reg::zero) {
-                    fmt::print(os, "j {:x} <{:+x}>", _dec.pc() + int64_t(imm), int64_t(imm));
-                    return true;
-                } else if (_dec.rd() == reg::ra) {
-                    fmt::print(os, "jal {:x} <{:+x}>",  _dec.pc() + int64_t(imm), int64_t(imm));
-                    return true;
-                }
-                break;
-            }
-
-            case opc::jalr: {
-                auto rd = _dec.rd();
-                auto rs1 = _dec.rs1();
-                if (_dec.imm() == 0) {
-                    switch (rd) {
-                        case reg::zero:
-                            if (rs1 == reg::ra) {
-                                os << "ret";
-                            } else {
-                                fmt::print(os, "jr {}", rs1);
-                            }
-                            return true;
-
-                        case reg::ra:
-                            fmt::print(os, "jalr {}", rs1);
-                            return true;
-
-                        default: break;
-                    }
-                }
-                break;
-            }
-
-            case opc::addi: {
-                auto rd = _dec.rd();
-                auto rs1 = _dec.rs1();
-                auto imm = _dec.imm();
-
-                switch (_dec.funct()) {
-                    case 0b000: { /* addi */
-                        if (rd == reg::zero && rs1 == reg::zero && imm == 0) {
-                            os << "nop";
-                            return true;
-                        } else if (rd != reg::zero && rs1 == reg::zero) {
-                            fmt::print(os, "li {}, {}", rd, int64_t(imm));
-                            return true;
-                        }
-                        break;
-                    }
-
-                    case 0b011: { /* sltiu */
-                        if (imm == 1) {
-                            fmt::print(os, "seqz {}, {}", rd, rs1);
-                            return true;
-                        }
-                        break;
-                    }
-
-                    case 0b100: { /* xori */
-                        if (int64_t(imm) == -1) {
-                            fmt::print(os, "not {}, {}", rd, rs1);
-                            return true;
-                        }
-                        break;
-                    }
-                }
-                break;
-            }
-
-            case opc::ecall: {
-                switch (_dec.imm()) {
-                    case 0: os << "ecall"; break;
-                    case 1: os << "ebreak"; break;
-                }
-                return true;
-            }
-
-            case opc::addiw: {
-                if (_dec.funct() == 0 && _dec.imm() == 0) {
-                    fmt::print(os, "sext.w {}, {}", _dec.rd(), _dec.rs1());
-                    return true;
-                }
-                break;
-            }
-
-            case opc::addw: {
-                if (_dec.funct() == 0b0100000000 && _dec.rs1() == reg::zero) {
-                    fmt::print(os, "negw {}, {}", _dec.rd(), _dec.rs2());
-                    return true;
-                }
-                break;
-            }
-
-            default:
-                break;
-        }
-
-        return false;
-    }
-
-    std::ostream& formatter::instr(std::ostream& os) const {
-        if (_dec.compressed()) {
-            return _format_compressed(os);
+namespace arch::rv64 {
+    std::ostream& format(std::ostream& os, const decoder& dec) {
+        if (dec.compressed()) {
+            return format_compressed(os, dec);
         } else {
-           return _format_full(os);
+           return format_full(os, dec);
         }
     }
 
-    std::ostream& formatter::regs(std::ostream& os) const {
-        using namespace std::literals;
-
-        size_t rows = (magic_enum::enum_count<reg>() / 2);
-        for (size_t i = 0; i < rows; ++i) {
-            reg left = static_cast<reg>(i);
-            reg right = static_cast<reg>(i + rows);
-
-            fmt::print(os, "{:>2}={:016x}  {:>3}={:016x}\n",
-                (i == 0 ? "x0"sv : magic_enum::enum_name(left)), _reg.read(left),
-                magic_enum::enum_name(right), _reg.read(right)
-            );
+    std::ostream& format(std::ostream& os, uintptr_t pc, uint16_t instr) {
+        if (instr) {
+            try {
+                decoder dec { pc, instr };
+                return format(os, dec);
+            } catch (const illegal_compressed_instruction&) {
+                /* pass */
+            }
         }
 
+        fmt::print(os, "{:x}:  {:04x}       <unknown>", pc, instr);
+        return os;
+    }
+
+    std::ostream& format(std::ostream& os, uintptr_t pc, uint32_t instr) {
+        if (instr) {
+            try {
+                decoder dec { pc, instr };
+                return format(os, dec);
+            } catch (const illegal_instruction&) {
+                /* pass */
+            }
+        }
+
+        fmt::print(os, "{:x}:  {:08x}   <unknown>", pc, instr);
         return os;
     }
 }
