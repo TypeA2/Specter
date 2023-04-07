@@ -66,7 +66,7 @@ namespace arch::rv64 {
             T val;
         };
 
-        using ingested_instruction = std::variant<udata<uint8_t>, udata<uint16_t>, udata<uint32_t>, decoder>;
+        using ingested_instruction = std::variant<decoder, udata<uint8_t>, udata<uint16_t>, udata<uint32_t>>;
         [[nodiscard]] static std::vector<ingested_instruction> ingest(uintptr_t pc, std::span<const std::byte> data);
 
         explicit decoder(uintptr_t pc, uint16_t half);

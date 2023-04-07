@@ -577,6 +577,9 @@ namespace {
         switch (dec.type()) {
             case instr_type::I:
                 switch (dec.opcode()) {
+                    case opc::ecall:
+                        break;
+                        
                     case opc::jalr:
                     case opc::load:
                     case opc::fload:

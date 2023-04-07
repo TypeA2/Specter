@@ -14,9 +14,9 @@ target_max_warnings(TARGET specter_rec)
 
 add_subdirectory(util)
 add_subdirectory(memory)
+add_subdirectory(recompilation)
 add_subdirectory(arch)
 #add_subdirectory(execution)
-#add_subdirectory(recompilation)
 
 #target_link_libraries(
 #    specter_emu PRIVATE
@@ -30,6 +30,7 @@ target_link_libraries(
     specter_util
     specter_memory
     specter_arch
+    specter_recompilation
 )
 
 #set_target_properties(specter_emu PROPERTIES
