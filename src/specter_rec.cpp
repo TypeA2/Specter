@@ -90,7 +90,29 @@ int main(int argc, char** argv) {
 
         auto ingested = rv64::decoder::ingest(text_addr, text_data);
 
+        rv64::instruction_parser parser;
+        std::vector<rv64::instruction_parser::parse_result> parsed;
+
+        for (const auto& instr : ingested) {
+            std::visit(overloaded {
+                [] <std::unsigned_integral T> ([[maybe_unused]] rv64::decoder::udata<T> arg) { /* drop */ },
+                [&](const rv64::decoder& dec) { parsed.emplace_back(parser.parse(dec)); }
+            }, instr);
+        }
+
+        for (const auto& instr : parsed) {
+            instr->dump(std::cerr);
+            std::cerr << '\n';
+        }
+
+        /*enum class instr_type {
+            param,
+            syscall,
+            funccall,
+        };
+
         struct inserted_instr {
+            instr_type type;
             rv64::reg reg;
         };
 
@@ -105,7 +127,7 @@ int main(int argc, char** argv) {
                 [&](const rv64::decoder& dec) {
                     switch (dec.opcode()) {
                         case rv64::opc::ecall: {
-                            /* Pre-processing: find most recently inserted arguments, a0-a7 */
+                            // Pre-processing: find most recently inserted arguments, a0-a7 
                             uintptr_t cur_pc = dec.pc();
                             auto it = --partial.end();
                             std::set<rv64::reg> filled;
@@ -116,8 +138,8 @@ int main(int argc, char** argv) {
                                 const rv64::decoder& cur_dec = std::get<rv64::decoder>(*it);
                                 rv64::reg rd = cur_dec.rd();
                                 if (!filled.contains(rd) && rd >= rv64::reg::a0 && rd <= rv64::reg::a7) {
-                                    /* Writes to an argument register consider it a parameter */
-                                    param_stack.push(inserted_instr { .reg = rd });
+                                    // Writes to an argument register consider it a parameter
+                                    param_stack.push(inserted_instr { .type = instr_type::param, .reg = rd });
                                     filled.insert(rd);
                                 }
 
@@ -130,7 +152,8 @@ int main(int argc, char** argv) {
                                 param_stack.pop();
                             }
                             
-                            [[fallthrough]];
+                            partial.emplace_back(inserted_instr { .type = instr_type::syscall });
+                            break;
                         }
 
                         default:
@@ -143,13 +166,13 @@ int main(int argc, char** argv) {
         for (const auto& instr : partial) {
             std::visit(overloaded {
                 [] (const inserted_instr& arg) {
-                    fmt::print(std::cerr, "(none):             param {}\n", arg.reg);
+                    fmt::print(std::cerr, "(none):             {} {}\n", magic_enum::enum_name(arg.type), arg.reg);
                 },
                 [&](const rv64::decoder& dec) {
                     fmt::print(std::cerr, " {}\n", dec);
                 }
             }, instr);
-        }
+        }*/
 
         return EXIT_SUCCESS;
         

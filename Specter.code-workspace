@@ -85,6 +85,7 @@
 			"charconv": "cpp",
 			"source_location": "cpp",
 			"cerrno": "cpp"
-		}
+		},
+		"C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 	}
 }
